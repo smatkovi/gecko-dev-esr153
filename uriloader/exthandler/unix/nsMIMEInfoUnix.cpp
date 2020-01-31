@@ -11,6 +11,17 @@
 #include "nsIIOService.h"
 #include "nsLocalFile.h"
 
+#ifdef MOZ_ENABLE_CONTENTACTION
+#  include <contentaction5/contentaction.h>
+#  include <QByteArray>
+#  include <QString>
+#  include <QUrl>
+
+#  include "nsComponentManagerUtils.h"
+#  include "nsContentHandlerApp.h"
+#  include "nsXPCOMCID.h"
+#endif
+
 #ifdef MOZ_ENABLE_DBUS
 #  include "nsDBusHandlerApp.h"
 #endif
@@ -69,6 +80,19 @@ nsMIMEInfoUnix::GetHasDefaultHandler(bool* _retval) {
 
   if (*_retval) return NS_OK;
 
+#ifdef MOZ_ENABLE_CONTENTACTION
+  ContentAction::Action action;
+  if (mClass == eProtocolInfo) {
+    const QString uri =
+        QString::fromUtf8(mSchemeOrType.get()) + QLatin1Char(':');
+    action = ContentAction::Action::defaultActionForScheme(uri);
+  } else {
+    action = ContentAction::Action::defaultActionForFile(
+        QUrl(), QString::fromUtf8(mSchemeOrType.get()));
+  }
+  *_retval = action.isValid();
+#endif
+
   return NS_OK;
 }
 
@@ -81,7 +105,21 @@ nsresult nsMIMEInfoUnix::LaunchDefaultWithFile(nsIFile* aFile) {
   }
 
   nsAutoCString nativePath;
-  aFile->GetNativePath(nativePath);
+  nsresult rv = aFile->GetNativePath(nativePath);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+#ifdef MOZ_ENABLE_CONTENTACTION
+  const QUrl localFileUri =
+      QUrl::fromLocalFile(QString::fromUtf8(nativePath.get()));
+  ContentAction::Action action =
+      ContentAction::Action::defaultActionForFile(
+          localFileUri, QString::fromUtf8(mSchemeOrType.get()));
+  if (action.isValid()) {
+    action.trigger();
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
+#endif
 
   nsCOMPtr<nsIGIOService> giovfs = do_GetService(NS_GIOSERVICE_CONTRACTID);
   if (!giovfs) {
@@ -89,7 +127,6 @@ nsresult nsMIMEInfoUnix::LaunchDefaultWithFile(nsIFile* aFile) {
   }
 
   // nsGIOMimeApp->Launch wants a URI string instead of local file
-  nsresult rv;
   nsCOMPtr<nsIIOService> ioservice =
       do_GetService(NS_IOSERVICE_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -106,3 +143,39 @@ nsresult nsMIMEInfoUnix::LaunchDefaultWithFile(nsIFile* aFile) {
 
   return app->LaunchWithURI(uri, nullptr);
 }
+
+#ifdef MOZ_ENABLE_CONTENTACTION
+NS_IMETHODIMP nsMIMEInfoUnix::GetPossibleApplicationHandlers(
+    nsIMutableArray** aPossibleAppHandlers) {
+  if (!mPossibleApplications) {
+    mPossibleApplications = do_CreateInstance(NS_ARRAY_CONTRACTID);
+    if (!mPossibleApplications) {
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    QList<ContentAction::Action> actions;
+    const bool handlesScheme = mClass == eProtocolInfo;
+    if (handlesScheme) {
+      const QString uri =
+          QString::fromUtf8(mSchemeOrType.get()) + QLatin1Char(':');
+      actions = ContentAction::Action::actionsForScheme(uri);
+    } else {
+      actions = ContentAction::Action::actionsForFile(
+          QUrl(), QString::fromUtf8(mSchemeOrType.get()));
+    }
+
+    for (const ContentAction::Action& action : actions) {
+      const QByteArray name = action.name().toUtf8();
+      RefPtr<nsContentHandlerApp> app = new nsContentHandlerApp(
+          NS_ConvertUTF8toUTF16(name.constData()), mSchemeOrType,
+          handlesScheme);
+      nsresult rv = mPossibleApplications->AppendElement(app);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+  }
+
+  *aPossibleAppHandlers = mPossibleApplications;
+  NS_IF_ADDREF(*aPossibleAppHandlers);
+  return NS_OK;
+}
+#endif

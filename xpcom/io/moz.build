@@ -61,6 +61,8 @@ else:
         "nsLocalFileUnix.cpp",
     ]
     CXXFLAGS += CONFIG["MOZ_GTK3_CFLAGS"]
+    if CONFIG["MOZ_ENABLE_CONTENTACTION"]:
+        CXXFLAGS += CONFIG["MOZ_QT_CFLAGS"]
 
 XPIDL_MODULE = "xpcom_io"
 

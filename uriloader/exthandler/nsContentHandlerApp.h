@@ -4,27 +4,27 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef __nsContentHandlerAppImpl_h__
-#define __nsContentHandlerAppImpl_h__
+#ifndef nsContentHandlerApp_h_
+#define nsContentHandlerApp_h_
 
-#include <contentaction/contentaction.h>
-#include "nsString.h"
 #include "nsIMIMEInfo.h"
+#include "nsString.h"
 
-class nsContentHandlerApp : public nsIHandlerApp {
+class nsContentHandlerApp final : public nsIHandlerApp {
  public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIHANDLERAPP
 
-  nsContentHandlerApp(nsString aName, nsCString aType,
-                      ContentAction::Action& aAction);
-  virtual ~nsContentHandlerApp() {}
+  nsContentHandlerApp(const nsAString& aName, const nsACString& aType,
+                      bool aHandlesScheme);
 
- protected:
+ private:
+  ~nsContentHandlerApp() = default;
+
   nsString mName;
   nsCString mType;
   nsString mDetailedDescription;
-
-  ContentAction::Action mAction;
+  bool mHandlesScheme;
 };
-#endif
+
+#endif  // nsContentHandlerApp_h_

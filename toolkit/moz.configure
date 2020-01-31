@@ -649,12 +649,15 @@ with only_when(toolkit_qt):
     qt_feedback = pkg_check_modules(
         "QT5FEEDBACK", "Qt0Feedback", allow_missing=True, config=False
     )
+    contentaction = pkg_check_modules(
+        "LIBCONTENTACTION", "contentaction5", allow_missing=True, config=False
+    )
 
-    @depends(qt_base, qmsystem2, qt_feedback)
-    def qt_build_flags(qt_base, qmsystem2, qt_feedback):
+    @depends(qt_base, qmsystem2, qt_feedback, contentaction)
+    def qt_build_flags(qt_base, qmsystem2, qt_feedback, contentaction):
         cflags = list(qt_base.cflags)
         libs = list(qt_base.libs)
-        for package in (qmsystem2, qt_feedback):
+        for package in (qmsystem2, qt_feedback, contentaction):
             if package:
                 cflags.extend(package.cflags)
                 libs.extend(package.libs)
@@ -666,6 +669,8 @@ with only_when(toolkit_qt):
     set_define("MOZ_ENABLE_QMSYSTEM2", True, when=qmsystem2)
     set_config("MOZ_ENABLE_QT5FEEDBACK", True, when=qt_feedback)
     set_define("MOZ_ENABLE_QT5FEEDBACK", True, when=qt_feedback)
+    set_config("MOZ_ENABLE_CONTENTACTION", True, when=contentaction)
+    set_define("MOZ_ENABLE_CONTENTACTION", True, when=contentaction)
     set_config("MOZ_ENABLE_QT5GEOPOSITION", True)
     set_define("MOZ_ENABLE_QT5GEOPOSITION", True)
 
