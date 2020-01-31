@@ -6,6 +6,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#ifdef MOZ_ENABLE_CONTENTACTION
+#  include <contentaction5/contentaction.h>
+#  include <QString>
+#endif
+
 #include "nsOSHelperAppService.h"
 #include "nsMIMEInfoUnix.h"
 #ifdef MOZ_WIDGET_GTK
@@ -1099,6 +1104,13 @@ nsresult nsOSHelperAppService::OSProtocolHandlerExists(
 #ifdef MOZ_WIDGET_GTK
     // Check the GNOME registry for a protocol handler
     *aHandlerExists = nsGNOMERegistry::HandlerExists(aProtocolScheme);
+#elif defined(MOZ_ENABLE_CONTENTACTION)
+    // libcontentaction expects a URI, not a bare scheme.
+    const QString uri =
+        QString::fromUtf8(aProtocolScheme) + QLatin1Char(':');
+    const ContentAction::Action action =
+        ContentAction::Action::defaultActionForScheme(uri);
+    *aHandlerExists = action.isValid();
 #else
     *aHandlerExists = false;
 #endif
