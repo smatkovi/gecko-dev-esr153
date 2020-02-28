@@ -6,6 +6,10 @@
 #  include "AndroidDecoderModule.h"
 #endif
 
+#ifdef MOZ_WIDGET_QT
+#  include "nsQAppInstance.h"
+#endif
+
 #include "BrowserChild.h"
 #include "ContentChild.h"
 #include "GMPServiceChild.h"
@@ -729,6 +733,11 @@ void ContentChild::Init(mozilla::ipc::UntypedEndpoint&& aEndpoint,
       gtk_init(nullptr, nullptr);
     }
   }
+#endif
+
+#ifdef MOZ_WIDGET_QT
+  // sigh, seriously
+  nsQAppInstance::AddRef();
 #endif
 
 #ifdef MOZ_X11

@@ -10,8 +10,23 @@
 #include "nsIIOService.h"
 #include "nsLocalFile.h"
 
+#ifdef MOZ_ENABLE_DBUS
+#  include "nsDBusHandlerApp.h"
+#endif
+#ifdef MOZ_WIDGET_QT
+#  include "nsMIMEInfoQt.h"
+#endif
+
 nsresult nsMIMEInfoUnix::LoadUriInternal(nsIURI* aURI) {
-  return nsGNOMERegistry::LoadURL(aURI);
+  nsresult rv = nsGNOMERegistry::LoadURL(aURI);
+
+#ifdef MOZ_WIDGET_QT
+  if (NS_FAILED(rv)) {
+    rv = nsMIMEInfoQt::LoadUriInternal(aURI);
+  }
+#endif
+
+  return rv;
 }
 
 NS_IMETHODIMP nsMIMEInfoUnix::GetDefaultExecutable(nsIFile** aExecutable) {

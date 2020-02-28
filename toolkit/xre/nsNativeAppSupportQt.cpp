@@ -1,0 +1,1 @@
+../../../gecko-qt/toolkit/xre/nsNativeAppSupportQt.cpp

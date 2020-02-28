@@ -99,12 +99,16 @@ LOCAL_INCLUDES += [
 ]
 
 if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'android'):
+if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'android', 'qt'):
     LOCAL_INCLUDES += [
         "/gfx/cairo/cairo/src",
     ]
     CXXFLAGS += CONFIG['CAIRO_FT_CFLAGS']
 
-if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'gtk':
+if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'qt':
+    CXXFLAGS += CONFIG['MOZ_CAIRO_CFLAGS']
+
+if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'qt'):
     CXXFLAGS += CONFIG['MOZ_PANGO_CFLAGS']
 
 if CONFIG['TARGET_CPU'] in ('mips32', 'mips64'):
@@ -429,7 +433,7 @@ def write_mozbuild(sources):
   f.write("if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('cocoa', 'uikit'):\n")
   write_sources(f, sources['mac'], 4)
 
-  f.write("if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'gtk':\n")
+  f.write("if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'qt'):\n")
   write_sources(f, sources['linux'], 4)
 
   f.write("if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'windows':\n")
