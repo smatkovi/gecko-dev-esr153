@@ -125,6 +125,12 @@ if CONFIG["TARGET_KERNEL"] == "Linux":
         DEFINES["ANDROID"] = True
         DEFINES["_POSIX_MONOTONIC_CLOCK"] = 0
 
+if CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
+    SOURCES += [
+        "src/base/message_pump_qt.cc",
+    ]
+    CXXFLAGS += CONFIG["MOZ_QT_CFLAGS"]
+
 if CONFIG["TARGET_KERNEL"] == "SunOS":
     SOURCES += [
         "src/base/process_util_linux.cc",

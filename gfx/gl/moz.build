@@ -15,6 +15,8 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
     DEFINES["GLES_SILENCE_DEPRECATION"] = 1
 elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
     gl_provider = "Linux"
+elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
+    gl_provider = "GLX"
 elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "android":
     gl_provider = "EGL"
 

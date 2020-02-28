@@ -187,7 +187,7 @@ if CONFIG["MOZ_WAYLAND"]:
         "mozwayland",
     ]
 
-if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk" or CONFIG["MOZ_TREE_FREETYPE"]:
+if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("gtk", "qt") or CONFIG["MOZ_TREE_FREETYPE"]:
     USE_LIBS += [
         "freetype",
     ]
@@ -331,6 +331,10 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk" and CONFIG["COMPILE_ENVIRONMENT"]:
     OS_LIBS += [l for l in CONFIG["MOZ_GTK3_LIBS"] if l not in ("-lgtk-3", "-lgdk-3")]
     OS_LIBS += CONFIG["MOZ_X11_LIBS"]
     OS_LIBS += CONFIG["MOZ_PANGO_LIBS"]
+
+if CONFIG['MOZ_WIDGET_TOOLKIT'] == 'qt':
+    OS_LIBS += CONFIG['MOZ_QT_LIBS']
+    OS_LIBS += CONFIG['MOZ_PANGO_LIBS']
 
 if CONFIG["MOZ_ENABLE_LIBPROXY"]:
     OS_LIBS += CONFIG["MOZ_LIBPROXY_LIBS"]

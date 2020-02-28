@@ -250,7 +250,7 @@ bool Gecko_MediaFeatures_MatchesPlatform(StylePlatform aPlatform) {
 #elif defined(ANDROID)
     case StylePlatform::Android:
       return true;
-#elif defined(MOZ_WIDGET_GTK)
+#elif defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
     case StylePlatform::Linux:
       return true;
 #elif defined(XP_MACOSX)

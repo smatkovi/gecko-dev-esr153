@@ -29,6 +29,8 @@
     defined(XP_NETBSD) || defined(XP_OPENBSD)
 #  if defined(MOZ_WIDGET_GTK)
 #    include "base/message_pump_glib.h"
+#  elif defined(MOZ_WIDGET_QT)
+#    include "base/message_pump_qt.h"
 #  endif
 #endif
 #ifdef ANDROID

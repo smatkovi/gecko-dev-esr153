@@ -65,7 +65,7 @@ already_AddRefed<SharedFTFace> NativeFontResourceFreeType::CloneFace(
   return face.forget();
 }
 
-#ifdef MOZ_WIDGET_GTK
+#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
 NativeFontResourceFontconfig::NativeFontResourceFontconfig(
     UniquePtr<uint8_t[]>&& aFontData, uint32_t aDataLength,
     FT_Library aFTLibrary)

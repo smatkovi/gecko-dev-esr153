@@ -104,6 +104,23 @@ elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "uikit":
     LOCAL_INCLUDES += [
         "!/build",
     ]
+elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
+    EXPORTS += ["nsQAppInstance.h"]
+    moc_flags = [CONFIG["MOC"]] + CONFIG["MOZ_QT_CFLAGS"]
+    if CONFIG["MOZ_ENABLE_QMSYSTEM2"]:
+        moc_flags += ["-DMOZ_ENABLE_QMSYSTEM2"]
+    GeneratedFile(
+        "moc_nsNativeAppSupportQt.cpp",
+        script="/build/qt/moc.py",
+        inputs=["nsNativeAppSupportQt.h"],
+        flags=moc_flags,
+    )
+    SOURCES += [
+        "!moc_nsNativeAppSupportQt.cpp",
+        "nsNativeAppSupportQt.cpp",
+        "nsQAppInstance.cpp",
+    ]
+    CXXFLAGS += CONFIG["MOZ_QT_CFLAGS"]
 elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
     UNIFIED_SOURCES += [
         "nsNativeAppSupportUnix.cpp",

@@ -51,7 +51,7 @@ DIRS += ["xre"]
 
 if CONFIG["MOZ_WIDGET_TOOLKIT"] != "android":
     DIRS += ["mozapps/handling"]
-if CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
+if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'qt'):
     DIRS += ["system/unixproxy"]
 elif CONFIG["MOZ_WIDGET_TOOLKIT"] == "cocoa":
     DIRS += [

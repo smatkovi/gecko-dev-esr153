@@ -170,7 +170,7 @@ struct Face {
     nsCString mDescriptor;  // descriptor that can be used to instantiate a
                             // platform font reference
     uint16_t mIndex;        // an index used with descriptor (on some platforms)
-#ifdef MOZ_WIDGET_GTK
+#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
     uint16_t mSize;  // pixel size if bitmap; zero indicates scalable
 #endif
     bool mFixedPitch;                  // is the face fixed-pitch (monospaced)?
@@ -185,7 +185,7 @@ struct Face {
   Face(FontList* aList, const InitData& aData)
       : mDescriptor(aList, aData.mDescriptor),
         mIndex(aData.mIndex),
-#ifdef MOZ_WIDGET_GTK
+#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
         mSize(aData.mSize),
 #endif
         mFixedPitch(aData.mFixedPitch),
@@ -204,7 +204,7 @@ struct Face {
 
   String mDescriptor;
   uint16_t mIndex;
-#ifdef MOZ_WIDGET_GTK
+#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
   uint16_t mSize;
 #endif
   bool mFixedPitch;

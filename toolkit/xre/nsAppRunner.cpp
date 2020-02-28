@@ -3,6 +3,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#if defined(MOZ_WIDGET_QT)
+#include <QGuiApplication>
+#include <QStringList>
+#include "nsQAppInstance.h"
+#endif // MOZ_WIDGET_QT
+
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/dom/ContentChild.h"
 #include "mozilla/ipc/GeckoChildProcessHost.h"
@@ -334,6 +340,11 @@ int gKioskMonitor = -1;
 bool gAllowContentAnalysisArgPresent = false;
 
 MOZ_CONSTINIT nsString gAbsoluteArgv0Path;
+
+#ifdef MOZ_WIDGET_QT
+static int    gQtOnlyArgc;
+static char **gQtOnlyArgv;
+#endif
 
 #if defined(XP_WIN)
 MOZ_CONSTINIT nsString gProcessStartupShortcut;
@@ -2584,8 +2595,14 @@ nsresult LaunchChild(bool aBlankCommandLine, bool aTryExec) {
   // if supported by the platform.  Otherwise, use NSPR.
 
   if (aBlankCommandLine) {
+#if defined(MOZ_WIDGET_QT)
+    // Remove only arguments not given to Qt
+    gRestartArgc = gQtOnlyArgc;
+    gRestartArgv = gQtOnlyArgv;
+#else
     gRestartArgc = 1;
     gRestartArgv[gRestartArgc] = nullptr;
+#endif
   }
 
   SaveToEnv("MOZ_LAUNCHED_CHILD=1");
@@ -4773,6 +4790,25 @@ int XREMain::XRE_mainStartup(bool* aExitFlag) {
   }
 #endif /* XP_WIN */
 
+#if defined(MOZ_WIDGET_QT)
+  nsQAppInstance::AddRef(gArgc, gArgv);
+
+  QStringList nonQtArguments = qApp->arguments();
+  gQtOnlyArgc = 1;
+  gQtOnlyArgv = (char**) malloc(sizeof(char*)
+                * (gRestartArgc - nonQtArguments.size() + 2));
+
+  // copy binary path
+  gQtOnlyArgv[0] = gRestartArgv[0];
+
+  for (int i = 1; i < gRestartArgc; ++i) {
+    if (!nonQtArguments.contains(gRestartArgv[i])) {
+      // copy arguments used by Qt for later
+      gQtOnlyArgv[gQtOnlyArgc++] = gRestartArgv[i];
+    }
+  }
+  gQtOnlyArgv[gQtOnlyArgc] = nullptr;
+#endif
 #if defined(MOZ_WIDGET_GTK)
   // setup for private colormap.  Ideally we'd like to do this
   // in nsAppShell::Create, but we need to get in before gtk
@@ -6190,6 +6226,10 @@ int XREMain::XRE_main(int argc, char* argv[], const BootstrapConfig& aConfig) {
   // has gone out of scope.  see bug #386739 for more details
   mProfileLock->Unlock();
   gProfileLock = nullptr;
+
+#if defined(MOZ_WIDGET_QT)
+  nsQAppInstance::Release();
+#endif
 
   gLastAppVersion.Truncate();
   gLastAppBuildID.Truncate();

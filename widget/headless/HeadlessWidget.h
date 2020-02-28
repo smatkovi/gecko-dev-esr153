@@ -17,6 +17,13 @@
 #  define MOZ_HEADLESS_SCROLL_MULTIPLIER 3
 #  define MOZ_HEADLESS_SCROLL_DELTA_MODE \
     mozilla::dom::WheelEvent_Binding::DOM_DELTA_LINE
+#elif defined(MOZ_WIDGET_QT)
+#  define MOZ_HEADLESS_MOUSE_MOVE 5  // QEvent::MouseMove
+#  define MOZ_HEADLESS_MOUSE_DOWN 2  // QEvent::MouseButtonPress
+#  define MOZ_HEADLESS_MOUSE_UP 3    // QEvent::MouseButtonRelease
+#  define MOZ_HEADLESS_SCROLL_MULTIPLIER 3
+#  define MOZ_HEADLESS_SCROLL_DELTA_MODE \
+    mozilla::dom::WheelEvent_Binding::DOM_DELTA_LINE
 #elif defined(XP_WIN)
 #  define MOZ_HEADLESS_SCROLL_MULTIPLIER \
     .025  // default scroll lines (3) / WHEEL_DELTA (120)

@@ -105,7 +105,9 @@ if CONFIG["MOZ_WAYLAND"]:
         "RenderCompositorNative.cpp",
     ]
 
-if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk"):
+if CONFIG["MOZ_WIDGET_TOOLKIT"] in ("android", "gtk", "qt"):
+    if CONFIG["MOZ_WIDGET_TOOLKIT"] == "qt":
+        CXXFLAGS += CONFIG["MOZ_CAIRO_CFLAGS"]
     CXXFLAGS += CONFIG["CAIRO_FT_CFLAGS"]
 
 if CONFIG["COMPILE_ENVIRONMENT"]:

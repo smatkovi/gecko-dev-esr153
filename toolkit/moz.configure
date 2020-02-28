@@ -566,6 +566,7 @@ def toolkit_choices(target):
             "cairo-gtk3-x11-wayland",
             "cairo-gtk3-wayland-only",
             "cairo-gtk3-x11-only",
+            "cairo-qt",
         )
 
 
@@ -613,6 +614,63 @@ set_define(toolkit_define, True)
 @depends(toolkit)
 def toolkit_gtk(toolkit):
     return toolkit == "gtk"
+
+
+@depends(toolkit)
+def toolkit_qt(toolkit):
+    return toolkit == "qt"
+
+
+with only_when(toolkit_qt):
+    set_config("MOZ_ENABLE_QT", True)
+    set_define("MOZ_ENABLE_QT", True)
+    set_config("MOZ_ENABLE_QTNETWORK", True)
+    set_define("MOZ_ENABLE_QTNETWORK", True)
+    set_define("QT_NO_KEYWORDS", True)
+
+    qt_base = pkg_check_modules(
+        "MOZ_QT_BASE",
+        [
+            "Qt5Core",
+            "Qt5Gui",
+            "Qt5Network",
+            "Qt5Positioning",
+            "Qt5PrintSupport",
+            "Qt5Quick",
+            "Qt5Widgets",
+            "gio-unix-2.0",
+            "glib-2.0",
+            "gobject-2.0",
+        ],
+    )
+    qmsystem2 = pkg_check_modules(
+        "QMSYSTEM2", "qmsystem2", allow_missing=True, config=False
+    )
+    qt_feedback = pkg_check_modules(
+        "QT5FEEDBACK", "Qt0Feedback", allow_missing=True, config=False
+    )
+
+    @depends(qt_base, qmsystem2, qt_feedback)
+    def qt_build_flags(qt_base, qmsystem2, qt_feedback):
+        cflags = list(qt_base.cflags)
+        libs = list(qt_base.libs)
+        for package in (qmsystem2, qt_feedback):
+            if package:
+                cflags.extend(package.cflags)
+                libs.extend(package.libs)
+        return namespace(cflags=cflags, libs=libs)
+
+    set_config("MOZ_QT_CFLAGS", qt_build_flags.cflags)
+    set_config("MOZ_QT_LIBS", qt_build_flags.libs)
+    set_config("MOZ_ENABLE_QMSYSTEM2", True, when=qmsystem2)
+    set_define("MOZ_ENABLE_QMSYSTEM2", True, when=qmsystem2)
+    set_config("MOZ_ENABLE_QT5FEEDBACK", True, when=qt_feedback)
+    set_define("MOZ_ENABLE_QT5FEEDBACK", True, when=qt_feedback)
+    set_config("MOZ_ENABLE_QT5GEOPOSITION", True)
+    set_define("MOZ_ENABLE_QT5GEOPOSITION", True)
+
+    check_prog("MOC", ("moc-qt5", "moc"))
+    check_prog("RCC", ("rcc-qt5", "rcc"))
 
 
 @depends(toolkit_gtk, full_toolkit)
@@ -774,7 +832,7 @@ set_define(gl_provider_define, True)
 # ==============================================================
 @depends(toolkit)
 def pdf_printing(toolkit):
-    if toolkit in ("windows", "gtk", "android"):
+    if toolkit in ('windows', 'gtk', 'android', 'qt'):
         return True
 
 
@@ -788,7 +846,8 @@ option(env="USE_FC_FREETYPE", help="Force-enable the use of fontconfig freetype"
 
 @depends("USE_FC_FREETYPE", toolkit)
 def fc_freetype(value, toolkit):
-    if value or (toolkit == "gtk" and value.origin == "default"):
+    if value or (toolkit in ('gtk', 'qt') and
+                 value.origin == 'default'):
         return True
 
 
@@ -796,7 +855,7 @@ set_define("USE_FC_FREETYPE", fc_freetype)
 
 # Pango
 # ==============================================================
-pkg_check_modules("MOZ_PANGO", "pango >= 1.22.0", when=toolkit_gtk)
+pkg_check_modules("MOZ_PANGO", "pango >= 1.22.0", when=toolkit_gtk | toolkit_qt)
 
 # Fontconfig
 # ==============================================================
@@ -3535,7 +3594,7 @@ with only_when(toolkit_gtk):
 
 # DBus
 # ==============================================================
-with only_when(toolkit_gtk):
+with only_when(toolkit_gtk | toolkit_qt):
     option("--disable-dbus", help="Disable dbus support", when=use_pkg_config)
 
     @depends("--enable-dbus", when=use_pkg_config)
@@ -3606,7 +3665,7 @@ set_define("MOZ_LAYERS_HAVE_LOG", True, when="--enable-dump-painting")
 
 # libproxy support
 # ==============================================================
-with only_when(toolkit_gtk):
+with only_when(toolkit_gtk | toolkit_qt):
     system_lib_option(
         "--enable-libproxy",
         help="Enable libproxy support",

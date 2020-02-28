@@ -43,6 +43,8 @@
 #  include <gtk/gtk.h>
 #  include "gfxPlatformGtk.h"
 #  include "mozilla/WidgetUtilsGtk.h"
+#elif MOZ_WIDGET_QT
+#  include "gfxQtPlatform.h"
 #endif
 
 #ifdef MOZ_X11
@@ -1623,7 +1625,9 @@ nsresult gfxFcPlatformFontList::InitFontListForPlatform() {
   mLocalNames.Clear();
   mFcSubstituteCache.Clear();
 
+#ifdef MOZ_WIDGET_GTK
   ClearSystemFontOptions();
+#endif
 
   mAlwaysUseFontconfigGenerics = PrefFontListsUseOnlyGenerics();
   mOtherFamilyNamesInitialized = true;
@@ -1692,7 +1696,9 @@ nsresult gfxFcPlatformFontList::InitFontListForPlatform() {
     return NS_OK;
   }
 
+#ifdef MOZ_WIDGET_GTK
   UpdateSystemFontOptions();
+#endif
 
   UniquePtr<SandboxPolicy> policy;
 

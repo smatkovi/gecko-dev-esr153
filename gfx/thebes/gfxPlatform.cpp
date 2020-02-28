@@ -84,6 +84,8 @@
 #  include "gfxQuartzSurface.h"
 #elif defined(MOZ_WIDGET_GTK)
 #  include "gfxPlatformGtk.h"
+#elif defined(MOZ_WIDGET_QT)
+#  include "gfxQtPlatform.h"
 #elif defined(ANDROID)
 #  include "gfxAndroidPlatform.h"
 #endif
@@ -793,6 +795,8 @@ bool gfxPlatform::HasVariationFontSupport() {
     sHasVariationFontSupport = gfxPlatformMac::CheckVariationFontSupport();
 #elif defined(MOZ_WIDGET_GTK)
     sHasVariationFontSupport = gfxPlatformGtk::CheckVariationFontSupport();
+#elif defined(MOZ_WIDGET_QT)
+    sHasVariationFontSupport = gfxQtPlatform::CheckVariationFontSupport();
 #elif defined(ANDROID)
     sHasVariationFontSupport = gfxAndroidPlatform::CheckVariationFontSupport();
 #else
@@ -914,6 +918,8 @@ void gfxPlatform::Init() {
   gPlatform = new gfxPlatformMac;
 #elif defined(MOZ_WIDGET_GTK)
   gPlatform = new gfxPlatformGtk;
+#elif defined(MOZ_WIDGET_QT)
+  gPlatform = new gfxQtPlatform;
 #elif defined(ANDROID)
   gPlatform = new gfxAndroidPlatform;
 #else
@@ -1938,7 +1944,7 @@ BackendPrefsData gfxPlatform::GetBackendPrefs() const {
   data.mCanvasBitmask = BackendTypeBit(BackendType::SKIA);
   data.mContentBitmask = BackendTypeBit(BackendType::SKIA);
 
-#ifdef MOZ_WIDGET_GTK
+#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
   data.mCanvasBitmask |= BackendTypeBit(BackendType::CAIRO);
   data.mContentBitmask |= BackendTypeBit(BackendType::CAIRO);
 #endif
@@ -1978,7 +1984,7 @@ void gfxPlatform::InitBackendPrefs(BackendPrefsData&& aPrefsData) {
   }
 
   uint32_t swBackendBits = BackendTypeBit(BackendType::SKIA);
-#ifdef MOZ_WIDGET_GTK
+#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
   swBackendBits |= BackendTypeBit(BackendType::CAIRO);
 #endif
   mSoftwareBackend = GetContentBackendPref(swBackendBits);
