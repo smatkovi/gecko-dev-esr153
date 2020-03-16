@@ -213,6 +213,30 @@ void MessageLoop::set_current(MessageLoop* loop) { get_tls_ptr().Set(loop); }
 
 static mozilla::Atomic<int32_t> message_loop_id_seq(0);
 
+MessageLoop::MessageLoop(base::MessagePump* aMessagePump)
+    : type_(TYPE_EMBED),
+      id_(++message_loop_id_seq),
+      nestable_tasks_allowed_(true),
+      exception_restoration_(false),
+      incoming_queue_lock_("MessageLoop Incoming Queue Lock"),
+      state_(nullptr),
+      run_depth_base_(1),
+      shutting_down_(false),
+#ifdef XP_WIN
+      os_modal_loop_(false),
+#endif  // XP_WIN
+      transient_hang_timeout_(0),
+      permanent_hang_timeout_(0),
+      next_sequence_num_(0) {
+  DCHECK(!current()) << "should only have one message loop per thread";
+  get_tls_ptr().Set(this);
+
+  // Must initialize after current() is initialized.
+  mEventTarget = new EventTarget(this);
+
+  pump_ = aMessagePump;
+}
+
 MessageLoop::MessageLoop(Type type, nsISerialEventTarget* aEventTarget)
     : type_(type),
       id_(++message_loop_id_seq),
