@@ -26,6 +26,8 @@ class CompositorVsyncSchedulerOwner {
                                  gfx::DrawTarget* aTarget,
                                  const gfx::IntRect* aRect = nullptr) = 0;
   virtual TimeDuration GetVsyncInterval() const = 0;
+  virtual void CompositeToDefaultTarget(VsyncId aId,
+                                        wr::RenderReasons aReasons) = 0;
 };
 
 }  // namespace layers
