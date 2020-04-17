@@ -3216,5 +3216,10 @@ WebRenderBridgeParentRef::~WebRenderBridgeParentRef() {
   MOZ_ASSERT(!mWebRenderBridge);
 }
 
+void WebRenderBridgeParent::CompositeToDefaultTarget(
+    VsyncId aId, wr::RenderReasons aReasons) {
+  CompositeToTarget(aId, aReasons, nullptr, nullptr);
+}
+
 }  // namespace mozilla::layers
 #undef LOG
