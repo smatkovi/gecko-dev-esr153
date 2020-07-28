@@ -170,6 +170,47 @@ StartupCache::StartupCache()
 
 StartupCache::~StartupCache() { UnregisterWeakMemoryReporter(this); }
 
+// Sailfish packages touch this stamp after upgrades. Clear caches created by
+// older packages before trying to load them.
+static nsresult ClearStartupCacheIfNeeded(nsIFile* aCacheFile,
+                                          bool aCustomCacheFile) {
+  nsCOMPtr<nsIFile> systemStamp;
+  MOZ_TRY(NS_NewLocalFile(u"/var/lib/_MOZEMBED_CACHE_CLEAN_"_ns,
+                          getter_AddRefs(systemStamp)));
+
+  bool stampExists = false;
+  MOZ_TRY(systemStamp->Exists(&stampExists));
+  if (!stampExists) {
+    return NS_OK;
+  }
+
+  bool cacheExists = false;
+  MOZ_TRY(aCacheFile->Exists(&cacheExists));
+  if (!cacheExists) {
+    return NS_OK;
+  }
+
+  PRTime stampModifiedTime = 0;
+  MOZ_TRY(systemStamp->GetLastModifiedTime(&stampModifiedTime));
+
+  PRTime cacheModifiedTime = 0;
+  MOZ_TRY(aCacheFile->GetLastModifiedTime(&cacheModifiedTime));
+  if (cacheModifiedTime >= stampModifiedTime) {
+    return NS_OK;
+  }
+
+  if (aCustomCacheFile) {
+    return aCacheFile->Remove(false);
+  }
+
+  // The default startup cache directory also contains related caches. Remove
+  // them together, matching Gecko's own compatibility-cache invalidation.
+  nsCOMPtr<nsIFile> cacheDirectory;
+  MOZ_TRY(aCacheFile->GetParent(getter_AddRefs(cacheDirectory)));
+  MOZ_TRY(cacheDirectory->Remove(true));
+  return cacheDirectory->Create(nsIFile::DIRECTORY_TYPE, 0777);
+}
+
 nsresult StartupCache::Init() {
   // workaround for bug 653936
   nsCOMPtr<nsIProtocolHandler> jarInitializer(
@@ -208,6 +249,10 @@ nsresult StartupCache::Init() {
 
     mFile = file.forget();
   }
+
+  rv = ClearStartupCacheIfNeeded(mFile, env && *env);
+  NS_WARNING_ASSERTION(NS_SUCCEEDED(rv),
+                       "Failed to clear stale Sailfish startup cache");
 
   mObserverService = do_GetService("@mozilla.org/observer-service;1");
 
