@@ -116,6 +116,8 @@ def Libxul(name, output_category=None):
 # is then linked to both build/libxul and gtest/libxul.
 Library("xul")
 
+SDK_LIBRARY = True
+
 STATIC_LIBRARY_NAME = "xul_s"
 
 # Use a FINAL_LIBRARY for Libxul_defines to propagate from there. They wouldn't

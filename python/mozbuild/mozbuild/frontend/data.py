@@ -645,11 +645,14 @@ class Library(BaseLibrary):
     """Context derived container object for a library"""
 
     KIND = "target"
-    __slots__ = ()
+    __slots__ = (
+        "is_sdk",
+    )
 
-    def __init__(self, context, basename, real_name=None):
+    def __init__(self, context, basename, real_name=None, is_sdk=False):
         BaseLibrary.__init__(self, context, real_name or basename)
         self.basename = basename
+        self.is_sdk = is_sdk
 
 
 class StaticLibrary(Library):
@@ -658,9 +661,15 @@ class StaticLibrary(Library):
     __slots__ = ("link_into", "no_expand_lib")
 
     def __init__(
-        self, context, basename, real_name=None, link_into=None, no_expand_lib=False
+        self,
+        context,
+        basename,
+        real_name=None,
+        is_sdk=False,
+        link_into=None,
+        no_expand_lib=False,
     ):
-        Library.__init__(self, context, basename, real_name)
+        Library.__init__(self, context, basename, real_name, is_sdk)
         self.link_into = link_into
         self.no_expand_lib = no_expand_lib
 
@@ -816,12 +825,13 @@ class SharedLibrary(Library):
         context,
         basename,
         real_name=None,
+        is_sdk=False,
         soname=None,
         variant=None,
         symbols_file=False,
     ):
         assert variant in range(1, self.MAX_VARIANT) or variant is None
-        Library.__init__(self, context, basename, real_name)
+        Library.__init__(self, context, basename, real_name, is_sdk)
         self.variant = variant
         self.lib_name = real_name or basename
         self.output_category = context.get("SHARED_LIBRARY_OUTPUT_CATEGORY")
@@ -1308,6 +1318,20 @@ class Exports(FinalTargetFiles):
     @property
     def install_target(self):
         return "dist/include"
+
+
+class SdkFiles(FinalTargetFiles):
+    """Sandbox container object for SDK_FILES, which is a
+    HierarchicalStringList.
+
+    We need an object derived from ContextDerived for use in the backend, so
+    this object fills that role. It just has a reference to the underlying
+    HierarchicalStringList, which is created when parsing SDK_FILES.
+    """
+
+    @property
+    def install_target(self):
+        return "dist/sdk"
 
 
 class GeneratedFile(ContextDerived):

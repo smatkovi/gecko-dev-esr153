@@ -9,3 +9,9 @@ PYTHON_UNITTEST_MANIFESTS += [
 ]
 
 GeneratedFile("xpidl.stub", script="header.py", entry_point="main")
+
+SDK_FILES.bin += [
+    "header.py",
+    "jsonxpt.py",
+    "xpidl.py",
+]
