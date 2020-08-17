@@ -215,6 +215,8 @@ SIMPLE_PROGRAMS :=
 HOST_SHARED_LIBRARY :=
 HOST_PROGRAM :=
 HOST_SIMPLE_PROGRAMS :=
+SDK_LIBRARY :=
+WASM_LIBRARY :=
 endif
 
 ifdef MACH
@@ -835,6 +837,18 @@ PREF_DIR = defaults/pref
 ifneq (,$(DIST_SUBDIR)$(XPI_NAME))
 PREF_DIR = defaults/preferences
 endif
+
+################################################################################
+# SDK
+
+ifneq (,$(SDK_LIBRARY))
+ifndef NO_DIST_INSTALL
+SDK_LIBRARY_FILES := $(SDK_LIBRARY)
+SDK_LIBRARY_DEST := $(SDK_LIB_DIR)
+SDK_LIBRARY_TARGET := target
+INSTALL_TARGETS += SDK_LIBRARY
+endif
+endif # SDK_LIBRARY
 
 ################################################################################
 # CHROME PACKAGING
