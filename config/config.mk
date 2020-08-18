@@ -247,6 +247,9 @@ endif
 #
 # Override defaults
 
+SDK_LIB_DIR = $(DIST)/sdk/lib
+SDK_BIN_DIR = $(DIST)/sdk/bin
+
 DEPENDENCIES	= .md
 
 # Export to propagate to cl and submake for third-party code.
