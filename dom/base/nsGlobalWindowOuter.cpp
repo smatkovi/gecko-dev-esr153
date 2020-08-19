@@ -4223,10 +4223,14 @@ nsresult nsGlobalWindowOuter::SetFullscreenInternal(FullscreenReason aReason,
   if (rootItem != mDocShell)
     return window->SetFullscreenInternal(aReason, aFullscreen);
 
+  // EmbedLite's root docshell is not chrome. Allow Qt embedding to continue
+  // through the fullscreen path without changing the docshell item type.
+#ifndef MOZ_WIDGET_QT
   // make sure we don't try to set full screen on a non-chrome window,
   // which might happen in embedding world
   if (mDocShell->ItemType() != nsIDocShellTreeItem::typeChrome)
     return NS_ERROR_FAILURE;
+#endif
 
   // FullscreenReason::ForForceExitFullscreen can only be used with exiting
   // fullscreen
