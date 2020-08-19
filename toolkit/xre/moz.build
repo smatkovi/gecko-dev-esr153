@@ -272,6 +272,9 @@ LOCAL_INCLUDES += [
     "/xpcom/build",
 ]
 
+if CONFIG["MOZ_EMBEDLITE"]:
+    LOCAL_INCLUDES += ["/mobile/sailfishos/embedprocess"]
+
 if CONFIG["MOZ_SANDBOX"] and CONFIG["OS_ARCH"] == "WINNT":
     LOCAL_INCLUDES += [
         "/security/sandbox/chromium",
