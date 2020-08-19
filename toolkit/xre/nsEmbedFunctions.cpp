@@ -77,6 +77,9 @@
 
 #include "mozilla/dom/ContentProcess.h"
 #include "mozilla/dom/ContentParent.h"
+#ifdef MOZ_EMBEDLITE
+#  include "EmbedLiteContentProcess.h"
+#endif
 
 #include "mozilla/ipc/TestShellParent.h"
 #if defined(XP_WIN)
@@ -463,6 +466,11 @@ nsresult XRE_InitChildProcess(int aArgc, char* aArgv[],
     return NS_ERROR_FAILURE;
   }
 
+#ifdef MOZ_EMBEDLITE
+  const bool isEmbedLite =
+      geckoargs::sEmbedLite.Get(aArgc, aArgv).valueOr(false);
+#endif
+
   base::AtExitManager exitManager;
 
   nsresult rv = XRE_InitCommandLine(aArgc, aArgv);
@@ -517,11 +525,21 @@ nsresult XRE_InitChildProcess(int aArgc, char* aArgv[],
           MOZ_CRASH("This makes no sense");
           break;
 
-        case GeckoProcessType_Content:
+        case GeckoProcessType_Content: {
           ioInterposerGuard.Init();
-          process = MakeUnique<ContentProcess>(std::move(*clientChannel),
-                                               *parentPID, messageChannelId);
+#ifdef MOZ_EMBEDLITE
+          if (isEmbedLite) {
+            process =
+                MakeUnique<mozilla::embedlite::EmbedLiteContentProcess>(
+                    std::move(*clientChannel), *parentPID, messageChannelId);
+          } else
+#endif
+          {
+            process = MakeUnique<ContentProcess>(std::move(*clientChannel),
+                                                 *parentPID, messageChannelId);
+          }
           break;
+        }
 
         case GeckoProcessType_IPDLUnitTest:
           MOZ_RELEASE_ASSERT(mozilla::_ipdltest::gMakeIPDLUnitTestProcessChild,
