@@ -6,6 +6,14 @@
 
 #include <locale.h>
 #include "mozilla/intl/Locale.h"
+
+#if defined(MOZ_ENABLE_DCONF)
+// External library symbols must retain their default visibility.
+#  pragma GCC visibility push(default)
+#  include <dconf.h>
+#  pragma GCC visibility pop
+#endif
+
 #include "OSPreferences.h"
 
 #include "nsServiceManagerUtils.h"
@@ -43,6 +51,33 @@ bool OSPreferences::ReadRegionalPrefsLocales(nsTArray<nsCString>& aLocaleList) {
   return false;
 }
 
+#if defined(MOZ_ENABLE_DCONF)
+static int HourCycleSailfish() {
+  int hourCycle = 0;
+  DConfClient* client = dconf_client_new();
+  if (!client) {
+    return hourCycle;
+  }
+
+  GVariant* value =
+      dconf_client_read(client, "/sailfish/i18n/lc_timeformat24h");
+  if (value && g_variant_is_of_type(value, G_VARIANT_TYPE_STRING)) {
+    const gchar* stringValue = g_variant_get_string(value, nullptr);
+    if (g_str_has_prefix(stringValue, "24")) {
+      hourCycle = 24;
+    } else if (g_str_has_prefix(stringValue, "12")) {
+      hourCycle = 12;
+    }
+  }
+
+  if (value) {
+    g_variant_unref(value);
+  }
+  g_object_unref(client);
+  return hourCycle;
+}
+#endif
+
 /*
  * This looks up into gtk settings for hourCycle format.
  *
@@ -52,6 +87,12 @@ bool OSPreferences::ReadRegionalPrefsLocales(nsTArray<nsCString>& aLocaleList) {
  * in the UI user selects this setting for all locales.
  */
 static int HourCycle() {
+#if defined(MOZ_ENABLE_DCONF)
+  if (int hourCycle = HourCycleSailfish()) {
+    return hourCycle;
+  }
+#endif
+
   nsCOMPtr<nsIGSettingsService> gsettings =
       do_GetService(NS_GSETTINGSSERVICE_CONTRACTID);
   if (!gsettings) {
