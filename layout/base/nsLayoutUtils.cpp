@@ -79,6 +79,7 @@
 #include "mozilla/ViewportUtils.h"
 #include "mozilla/WheelHandlingHelper.h"  // for WheelHandlingUtils
 #include "mozilla/dom/AnonymousContent.h"
+#include "mozilla/dom/BrowsingContext.h"
 #include "mozilla/dom/BrowserChild.h"
 #include "mozilla/dom/CanvasUtils.h"
 #include "mozilla/dom/CharacterDataBuffer.h"
