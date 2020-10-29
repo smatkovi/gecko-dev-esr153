@@ -26,6 +26,7 @@
 #include "mozilla/FloatingPoint.h"
 #include "mozilla/MathAlgorithms.h"
 #include "mozilla/Preferences.h"
+#include "mozilla/Services.h"
 #include "mozilla/StaticPrefs_media.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/glean/DomMediaMetrics.h"
@@ -36,8 +37,10 @@
 #include "nsContentUtils.h"
 #include "nsError.h"
 #include "nsIMemoryReporter.h"
+#include "nsIObserverService.h"
 #include "nsPrintfCString.h"
 #include "nsServiceManagerUtils.h"
+#include "nsString.h"
 #include "nsTArray.h"
 
 using namespace mozilla::dom;
@@ -58,6 +61,15 @@ LazyLogModule gMediaDecoderLog("MediaDecoder");
 #define DUMP(x, ...) printf_stderr(x "\n", ##__VA_ARGS__)
 
 #define NS_DispatchToMainThread(...) CompileError_UseAbstractMainThreadInstead
+
+static void SendMediaDecoderInfo(const nsString& aData) {
+  MOZ_ASSERT(NS_IsMainThread());
+  if (nsCOMPtr<nsIObserverService> observerService =
+          services::GetObserverService()) {
+    observerService->NotifyObservers(nullptr, "media-decoder-info",
+                                     aData.get());
+  }
+}
 
 class MediaMemoryTracker : public nsIMemoryReporter {
   virtual ~MediaMemoryTracker();
@@ -737,6 +749,12 @@ void MediaDecoder::MetadataLoaded(
       aInfo->mAudio.mChannels, aInfo->mAudio.mRate, aInfo->HasAudio(),
       aInfo->HasVideo());
 
+  nsString data;
+  data.AppendPrintf(
+      "{ \"owner\" : \"%p\", \"state\": \"meta\", \"a\" : %i, \"v\" : %i }",
+      this, aInfo->HasAudio(), aInfo->HasVideo());
+  SendMediaDecoderInfo(data);
+
   mMediaSeekable = aInfo->mMediaSeekable;
   mMediaSeekableOnlyInBufferedRanges =
       aInfo->mMediaSeekableOnlyInBufferedRanges;
@@ -991,6 +1009,16 @@ void MediaDecoder::ChangeState(PlayState aState) {
   }
 
   if (mPlayState != aState) {
+    nsString data;
+    if (aState == PLAY_STATE_PLAYING) {
+      data.AppendPrintf("{ \"owner\" : \"%p\", \"state\": \"play\" }",
+                        this);
+    } else {
+      data.AppendPrintf("{ \"owner\" : \"%p\", \"state\": \"pause\" }",
+                        this);
+    }
+    SendMediaDecoderInfo(data);
+
     DDLOG(DDLogCategory::Property, "play_state", EnumValueToString(aState));
     LOG("Play state changes from %s to %s", EnumValueToString(mPlayState),
         EnumValueToString(aState));

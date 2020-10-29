@@ -6722,11 +6722,10 @@ void HTMLMediaElement::NotifyOwnerDocumentActivityChanged() {
     NotifyDecoderActivityChanges();
   }
 
-  // We would suspend media when the document is inactive, or its docshell has
-  // been set to hidden and explicitly wants to suspend media. In those cases,
-  // the media would be not visible and we don't want them to continue playing.
+  // Suspend media when the document is hidden, or when its docshell is
+  // inactive and explicitly requests media suspension.
   bool shouldSuspend =
-      !OwnerDoc()->IsActive() || ShouldBeSuspendedByInactiveDocShell();
+      OwnerDoc()->Hidden() || ShouldBeSuspendedByInactiveDocShell();
   SuspendOrResumeElement(shouldSuspend);
 
   // If the owning document has become inactive we should shutdown the CDM.
@@ -6769,7 +6768,7 @@ void HTMLMediaElement::AddRemoveSelfReference() {
   // See the comment at the top of this file for the explanation of this
   // boolean expression.
   bool needSelfReference =
-      !mShuttingDown && ownerDoc->IsActive() &&
+      !mShuttingDown && !ownerDoc->Hidden() &&
       (mDelayingLoadEvent || (!mPaused && !Ended()) ||
        (mDecoder && mDecoder->IsSeeking()) || IsEligibleForAutoplay() ||
        (mMediaSource ? mProgressTimer : mNetworkState == NETWORK_LOADING));
