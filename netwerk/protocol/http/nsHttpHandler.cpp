@@ -452,7 +452,7 @@ nsresult nsHttpHandler::Init() {
 
   mRequestContextService = RequestContextService::GetOrCreate();
 
-#if defined(ANDROID) || defined(XP_IOS)
+#if defined(ANDROID) || defined(XP_IOS) || defined(MOZ_EMBEDLITE)
   mProductSub.AssignLiteral(MOZILLA_UAVERSION);
 #else
   mProductSub.AssignLiteral(LEGACY_UA_GECKO_TRAIL);
@@ -1054,7 +1054,9 @@ void nsHttpHandler::InitUserAgentComponents() {
   if (Preferences::GetBool(UA_PREF("use_device"), false)) {
     mDeviceModelId = mozilla::net::GetDeviceModelId();
   }
-#endif  // ANDROID
+#elif defined(MOZ_EMBEDLITE)
+  mCompatDevice.AssignLiteral("Mobile");
+#endif  // ANDROID || MOZ_EMBEDLITE
 
 #if defined(XP_IOS)
   // Freeze the iOS version to 18.0, use an underscore separator to avoid
