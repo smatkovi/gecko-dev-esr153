@@ -13,6 +13,7 @@ SOURCES += [
 Library("xpcomglue")
 
 FORCE_STATIC_LIB = True
+STATIC_LIBRARY_NAME = "xpcomglue"
 
 if CONFIG["CC_TYPE"] == "clang-cl":
     DEFINES["_USE_ANSI_CPP"] = True
@@ -29,6 +30,8 @@ LOCAL_INCLUDES += [
 
 # Don't use STL wrappers here (i.e. wrapped <new>); they require mozalloc
 DisableStlWrapping()
+
+NO_EXPAND_LIBS = True
 
 DIST_INSTALL = True
 

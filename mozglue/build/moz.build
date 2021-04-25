@@ -14,6 +14,9 @@ elif CONFIG["OS_TARGET"] in ("WINNT", "Darwin", "Android"):
 else:
     Library("mozglue")
 
+FORCE_STATIC_LIB = True
+STATIC_LIBRARY_NAME = "mozglue"
+
 if CONFIG["OS_TARGET"] == "Android":
     LDFLAGS += ["-Wl,--version-script,%s/mozglue.ver" % SRCDIR]
     SOURCES += [
@@ -89,6 +92,8 @@ LIBRARY_DEFINES["MOZ_HAS_MOZGLUE"] = True
 
 if CONFIG["MOZ_LINKER"] and CONFIG["TARGET_CPU"] == "arm":
     LDFLAGS += ["-Wl,-version-script,%s/arm-eabi-filter" % SRCDIR]
+
+NO_EXPAND_LIBS = True
 
 DIST_INSTALL = True
 
