@@ -3016,7 +3016,15 @@ nsDocShell::GetDomWindow(mozIDOMWindowProxy** aWindow) {
 NS_IMETHODIMP
 nsDocShell::GetMessageManager(ContentFrameMessageManager** aMessageManager) {
   RefPtr<ContentFrameMessageManager> mm;
-  if (RefPtr<BrowserChild> browserChild = BrowserChild::GetFrom(this)) {
+
+  nsCOMPtr<nsIBrowserChild> bc;
+  if (mTreeOwner) {
+    bc = do_GetInterface(mTreeOwner);
+  }
+
+  if (bc) {
+    bc->GetMessageManager(getter_AddRefs(mm));
+  } else if (RefPtr<BrowserChild> browserChild = BrowserChild::GetFrom(this)) {
     mm = browserChild->GetMessageManager();
   } else if (nsPIDOMWindowOuter* win = GetWindow()) {
     mm = win->GetMessageManager();
