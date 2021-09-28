@@ -830,6 +830,8 @@ EglDisplay::EglDisplay(const PrivateUseOnly&, GLLibraryEGL& lib,
   MarkExtensions(rawExtString, shouldDumpExts, "display", sEGLExtensionNames,
                  &mAvailableExtensions);
 
+  MarkExtensionUnsupported(EGLExtension::EXT_swap_buffers_with_damage);
+  MarkExtensionUnsupported(EGLExtension::KHR_swap_buffers_with_damage);
   // -
 
   if (!HasKHRImageBase()) {
