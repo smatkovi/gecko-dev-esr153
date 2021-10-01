@@ -19,7 +19,7 @@ this.VideoControlsWidget = class {
     this.document = this.element.ownerDocument;
     this.window = this.document.defaultView;
 
-    this.isMobile = this.window.navigator.appVersion.includes("Android");
+    this.isMobile = true;
   }
 
   /*
@@ -2496,7 +2496,7 @@ this.VideoControlsImplWidget = class {
           "pictureInPictureToggle"
         );
 
-        let isMobile = this.window.navigator.appVersion.includes("Android");
+        let isMobile = true;
         if (isMobile) {
           this.controlsContainer.classList.add("mobile");
         }
@@ -2991,7 +2991,7 @@ this.NoControlsMobileImplWidget = class {
         this.noControlsOverlay =
           this.shadowRoot.getElementById("controlsContainer");
 
-        let isMobile = this.window.navigator.appVersion.includes("Android");
+        let isMobile = true;
         if (isMobile) {
           this.controlsContainer.classList.add("mobile");
         }
