@@ -34,7 +34,7 @@ interface nsILoginManagerPrompter : nsISupports {
    *        a username or password.  Has two properties, 'usernames' and 'passwords'.
    */
   nsIPromptInstance promptToSavePassword(
-          in Element aBrowser,
+          in nsIDOMWindow aBrowser,
           in nsILoginInfo aLogin,
           [optional] in boolean dismissed,
           [optional] in boolean notifySaved,
@@ -64,7 +64,7 @@ interface nsILoginManagerPrompter : nsISupports {
    *        a username or password.  Has two properties, 'usernames' and 'passwords'.
    */
   nsIPromptInstance promptToChangePassword(
-          in Element aBrowser,
+          in nsIDOMWindow aBrowser,
           in nsILoginInfo aOldLogin,
           in nsILoginInfo aNewLogin,
           [optional] in boolean dismissed,
@@ -92,7 +92,7 @@ interface nsILoginManagerPrompter : nsISupports {
    *       is called.
    */
   nsIPromptInstance promptToChangePasswordWithUsernames(
-          in Element aBrowser,
+          in nsIDOMWindow aBrowser,
           in Array<nsILoginInfo> logins,
           in nsILoginInfo aNewLogin);
 };
