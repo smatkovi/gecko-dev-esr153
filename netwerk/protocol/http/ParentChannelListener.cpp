@@ -257,7 +257,7 @@ ParentChannelListener::GetAuthPrompt(uint32_t aPromptReason, const nsIID& iid,
 
   nsCOMPtr<nsPIDOMWindowOuter> window;
   RefPtr<dom::Element> frame = mBrowsingContext->Top()->GetEmbedderElement();
-  if (frame) window = frame->OwnerDoc()->GetWindow();
+  window = frame ? frame->OwnerDoc()->GetWindow() : mBrowsingContext->GetDOMWindow();
 
   // Get an auth prompter for our window so that the parenting
   // of the dialogs works as it should when using tabs.

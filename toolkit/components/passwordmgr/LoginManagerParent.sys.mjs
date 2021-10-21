@@ -1080,7 +1080,7 @@ export class LoginManagerParent extends JSWindowActorParent {
       existingLogin = this.#findSameLogin(logins, formLogin);
     }
 
-    const promptBrowser = lazy.LoginHelper.getBrowserForPrompt(browser);
+    const promptBrowser = browsingContext.window;
     const prompter = this._getPrompter(browser);
 
     if (!canMatchExistingLogin) {
@@ -1408,7 +1408,7 @@ export class LoginManagerParent extends JSWindowActorParent {
     }
 
     const prompter = this._getPrompter(browser);
-    const promptBrowser = lazy.LoginHelper.getBrowserForPrompt(browser);
+    const promptBrowser = browsingContext.window;
 
     if (existingLogin) {
       // Show a change doorhanger to allow modifying an already-saved login
