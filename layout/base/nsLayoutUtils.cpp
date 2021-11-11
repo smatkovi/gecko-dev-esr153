@@ -35,6 +35,7 @@
 #include "mozilla/DisplayPortUtils.h"
 #include "mozilla/glean/GfxMetrics.h"
 #include "mozilla/dom/AnonymousContent.h"
+#include "mozilla/dom/BrowsingContext.h"
 #include "mozilla/dom/BrowserChild.h"
 #include "mozilla/dom/CanvasUtils.h"
 #include "mozilla/dom/Document.h"
@@ -702,6 +703,20 @@ bool nsLayoutUtils::AsyncPanZoomEnabled(const nsIFrame* aFrame) {
   return widget->AsyncPanZoomEnabled();
 }
 
+static bool DocumentDisallowsZooming(const Document* aDocument) {
+  const ViewportMetaData metaData = aDocument->GetViewportMetaData();
+  return (!metaData.mMinimumScale.IsEmpty() &&
+          metaData.mMinimumScale == metaData.mMaximumScale) ||
+         metaData.mUserScalable.EqualsLiteral("0") ||
+         metaData.mUserScalable.EqualsLiteral("no") ||
+         metaData.mUserScalable.EqualsLiteral("false");
+}
+
+static bool IsDesktopView(const Document* aDocument) {
+  BrowsingContext* bc = aDocument->GetBrowsingContext();
+  return bc && bc->Top()->ForceDesktopViewport();
+}
+
 bool nsLayoutUtils::AllowZoomingForDocument(
     const mozilla::dom::Document* aDocument) {
   if (aDocument->GetPresShell() &&
@@ -711,7 +726,9 @@ bool nsLayoutUtils::AllowZoomingForDocument(
   // True if we allow zooming for all documents on this platform, or if we are
   // in RDM.
   BrowsingContext* bc = aDocument->GetBrowsingContext();
-  return StaticPrefs::apz_allow_zooming() || (bc && bc->InRDMPane());
+  return (StaticPrefs::apz_allow_zooming() &&
+          !DocumentDisallowsZooming(aDocument)) ||
+         (bc && bc->InRDMPane()) || IsDesktopView(aDocument);
 }
 
 static bool HasVisibleAnonymousContents(Document* aDoc) {
