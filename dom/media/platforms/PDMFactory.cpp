@@ -53,17 +53,13 @@
 #ifdef MOZ_OMX
 #  include "OmxDecoderModule.h"
 #endif
-<<<<<<< HEAD
-=======
 #ifdef MOZ_ENABLE_WEBRTC_GECKOCAMERA
 #  include "gecko-camera/GeckoCameraDecoderModule.h"
 #endif
 #include "FFVPXRuntimeLinker.h"
 
->>>>>>> 5f06748f9db5 (*mb2-prepare* Add a video decoder based on gecko-camera. JB#56755)
 #include <functional>
 
-#include "FFVPXRuntimeLinker.h"
 
 using DecodeSupport = mozilla::media::DecodeSupport;
 using DecodeSupportSet = mozilla::media::DecodeSupportSet;
@@ -172,14 +168,11 @@ class PDMInitializer final {
     }
 #endif  // !defined(MOZ_WIDGET_ANDROID)
 
-<<<<<<< HEAD
     RemoteMediaManagerChild::Init();
-=======
 #ifdef MOZ_ENABLE_WEBRTC_GECKOCAMERA
     GeckoCameraDecoderModule::Init();
 #endif
     RemoteDecoderManagerChild::Init();
->>>>>>> 5f06748f9db5 (*mb2-prepare* Add a video decoder based on gecko-camera. JB#56755)
   }
 
   static void InitDefaultPDMs() {

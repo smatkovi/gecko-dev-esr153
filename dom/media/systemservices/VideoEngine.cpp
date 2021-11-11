@@ -5,15 +5,12 @@
 #include "VideoEngine.h"
 
 #include "libwebrtcglue/SystemTime.h"
-<<<<<<< HEAD
 #include "video_engine/desktop_capture_impl.h"
-=======
 #include "system_wrappers/include/clock.h"
 
 #ifndef MOZ_EMBEDLITE
 #  include "video_engine/desktop_capture_impl.h"
 #endif
->>>>>>> b27b8de994f1 (*mb2-prepare* Disable desktop sharing for EmbedLite)
 
 #ifdef MOZ_WIDGET_ANDROID
 #  include "mozilla/jni/Utils.h"
@@ -134,8 +131,6 @@ already_AddRefed<VideoEngine> VideoEngine::Create(
       new VideoEngine(aCaptureDeviceType, std::move(aVideoCaptureFactory)));
 }
 
-<<<<<<< HEAD
-=======
 VideoEngine::CaptureEntry::CaptureEntry(
     int32_t aCapnum, rtc::scoped_refptr<webrtc::VideoCaptureModule> aCapture,
     webrtc::DesktopCaptureImpl* aDesktopImpl)
@@ -183,7 +178,6 @@ bool VideoEngine::WithEntry(
   return true;
 }
 
->>>>>>> b27b8de994f1 (*mb2-prepare* Disable desktop sharing for EmbedLite)
 int32_t VideoEngine::GenerateId() {
   // XXX Something better than this (a map perhaps, or a simple boolean TArray,
   // given the number in-use is O(1) normally!)
