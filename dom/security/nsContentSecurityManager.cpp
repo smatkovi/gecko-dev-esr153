@@ -394,8 +394,13 @@ static nsresult DoCORSChecks(nsIChannel* aChannel, nsILoadInfo* aLoadInfo,
   MOZ_RELEASE_ASSERT(aInAndOutListener,
                      "can not perform CORS checks without a listener");
 
+  static const bool disableCORSChecks =
+      Preferences::GetBool("security.disable_cors_checks", false);
+
+  // Sailfish embedders can explicitly bypass CORS for trusted deployments.
   // No need to set up CORS if TriggeringPrincipal is the SystemPrincipal.
-  if (aLoadInfo->TriggeringPrincipal()->IsSystemPrincipal()) {
+  if (disableCORSChecks ||
+      aLoadInfo->TriggeringPrincipal()->IsSystemPrincipal()) {
     return NS_OK;
   }
 
