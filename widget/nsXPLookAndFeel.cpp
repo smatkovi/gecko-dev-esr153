@@ -1012,7 +1012,9 @@ Maybe<nscolor> nsXPLookAndFeel::GetUncachedColor(ColorID aID,
 
 nsresult nsXPLookAndFeel::GetIntValue(IntID aID, int32_t& aResult) {
   if (NS_SUCCEEDED(Preferences::GetInt(sIntPrefs[size_t(aID)], &aResult))) {
-    return NS_OK;
+    if (aID != IntID::SystemUsesDarkTheme || aResult != 2) {
+      return NS_OK;
+    }
   }
 
   if (NS_FAILED(NativeGetInt(aID, aResult))) {
