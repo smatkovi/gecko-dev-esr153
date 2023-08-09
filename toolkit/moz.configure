@@ -3489,6 +3489,14 @@ option(env="MOZ_CRASHREPORTER_MOCK", help="Mock the crashreporter to test native
 set_config("MOZ_CRASHREPORTER_MOCK", True, when="MOZ_CRASHREPORTER_MOCK")
 
 
+# Embedlite
+# ==============================================================
+option("--with-embedlite", help="Build with embedlite")
+
+set_config("MOZ_EMBEDLITE", True, when="--with-embedlite")
+set_define("MOZ_EMBEDLITE", True, when="--with-embedlite")
+
+
 # Wine
 # ==============================================================
 @depends(target, host)
@@ -3606,6 +3614,22 @@ with only_when(toolkit_gtk | toolkit_qt):
 
         set_config("MOZ_ENABLE_DBUS", True)
         set_define("MOZ_ENABLE_DBUS", True)
+
+
+# dconf
+# ==============================================================
+with only_when(toolkit_gtk | toolkit_qt):
+    option("--disable-dconf", help="Disable dconf support", when=use_pkg_config)
+
+    @depends("--enable-dconf", when=use_pkg_config)
+    def enable_dconf_option(enable_dconf):
+        return enable_dconf
+
+    with only_when(enable_dconf_option):
+        pkg_check_modules("MOZ_DCONF", "dconf")
+
+        set_config("MOZ_ENABLE_DCONF", True)
+        set_define("MOZ_ENABLE_DCONF", True)
 
 
 # Necko's wifi scanner
