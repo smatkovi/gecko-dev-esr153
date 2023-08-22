@@ -201,7 +201,7 @@ fn main() {
         }
         // SWGL relies heavily on inlining for performance so override -Oz with -O2
         if tool.args().contains(&"-Oz".into()) {
-            build.flag("-O2");
+            build.flag("-O1");
         }
 
         // Most GLSL compilers assume something like fast-math so we turn it on.

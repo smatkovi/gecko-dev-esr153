@@ -645,7 +645,6 @@ set_config("CARGO_PROFILE_DEV_OPT_LEVEL", rustc_opt_level)
     rustc_opt_level,
     debug_rust,
     target,
-    "--enable-debug-symbols",
     "--enable-frame-pointers",
     path_remapping,
     path_remappings,
@@ -654,7 +653,6 @@ def rust_compile_flags(
     opt_level,
     debug_rust,
     target,
-    debug_symbols,
     frame_pointers,
     path_remapping,
     path_remappings,
@@ -679,8 +677,8 @@ def rust_compile_flags(
     if opt_level == "0" and not debug_rust:
         debug_assertions = False
 
-    if debug_symbols:
-        debug_info = "2"
+    # Keep Rust debug info disabled to avoid excessive compiler memory use on
+    # the constrained Sailfish OS build workers.
 
     opts = []
 
