@@ -11,7 +11,8 @@
 #include <type_traits>
 #include <utility>
 
-namespace mozilla::detail {
+namespace mozilla {
+namespace detail {
 
 template <typename T>
 constexpr bool IsTriviallyDestructibleAndCopyable =
@@ -86,6 +87,7 @@ struct MaybeStorageBase<T, true> {
   constexpr T* addr() { return &mStorage.val; }
 };
 
-}  // namespace mozilla::detail
+}  // namespace detail
+}  // namespace mozilla
 
 #endif
