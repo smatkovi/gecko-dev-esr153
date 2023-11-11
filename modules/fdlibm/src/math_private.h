@@ -26,6 +26,19 @@
 #include "fdlibm.h"
 
 /*
+ * Emulate FreeBSD internal double types.
+ * Adapted from https://github.com/freebsd/freebsd-src/search?q=__double_t
+ */
+
+#if defined __FLT_EVAL_METHOD__ && (__FLT_EVAL_METHOD__ == 2)
+typedef long double __double_t;
+#else
+typedef double      __double_t;
+#endif
+typedef __double_t  double_t;
+typedef float       __float_t;
+
+/*
  * The original fdlibm code used statements like:
  *	n0 = ((*(int*)&one)>>29)^1;		* index of high word *
  *	ix0 = *(n0+(int*)&x);			* high word of x *
