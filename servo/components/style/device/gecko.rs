@@ -66,6 +66,7 @@ impl Device {
             used_font_metrics: AtomicBool::new(false),
             used_viewport_size: AtomicBool::new(false),
             used_dynamic_viewport_size: AtomicBool::new(false),
+            safe_area_inset_usage: AtomicU8::new(0),
             environment: CssEnvironment,
             // This gets updated when we see the <body>, so it doesn't really
             // matter which color-scheme we look at here.
@@ -219,6 +220,7 @@ impl Device {
         self.used_viewport_size.store(false, Ordering::Relaxed);
         self.used_dynamic_viewport_size
             .store(false, Ordering::Relaxed);
+        self.safe_area_inset_usage.store(0, Ordering::Relaxed);
     }
 
     /// Recreates all the temporary state that the `Device` stores.

@@ -1507,7 +1507,7 @@ impl UnparsedValue {
             computed_context,
             attribute_tracker,
         ) {
-            Ok(css) => css,
+            Ok(result) => result,
             Err(..) => return invalid_at_computed_value_time(),
         };
 
@@ -1538,6 +1538,11 @@ impl UnparsedValue {
         input.skip_whitespace();
 
         if let Ok(keyword) = input.try_parse(CSSWideKeyword::parse) {
+            if safe_area_inset_usage != 0 {
+                stylist
+                    .device()
+                    .note_safe_area_inset_usage(safe_area_inset_usage);
+            }
             return Cow::Owned(PropertyDeclaration::css_wide_keyword(longhand_id, keyword));
         }
 
@@ -1545,7 +1550,14 @@ impl UnparsedValue {
             None => {
                 return match input.parse_entirely(|input| longhand_id.parse_value(&context, input))
                 {
-                    Ok(decl) => Cow::Owned(decl),
+                    Ok(decl) => {
+                        if safe_area_inset_usage != 0 {
+                            stylist
+                                .device()
+                                .note_safe_area_inset_usage(safe_area_inset_usage);
+                        }
+                        Cow::Owned(decl)
+                    },
                     Err(..) => invalid_at_computed_value_time(),
                 }
             },
@@ -1575,7 +1587,14 @@ impl UnparsedValue {
 
         let key = (shorthand, longhand_id);
         match shorthand_cache.get(&key) {
-            Some(decl) => Cow::Borrowed(decl),
+            Some(decl) => {
+                if safe_area_inset_usage != 0 {
+                    stylist
+                        .device()
+                        .note_safe_area_inset_usage(safe_area_inset_usage);
+                }
+                Cow::Borrowed(decl)
+            },
             // NOTE: Under normal circumstances we should always have a value, but when prefs
             // change we might hit this case. Consider something like `animation-timeline`, which
             // is a conditionally-enabled longhand of `animation`:

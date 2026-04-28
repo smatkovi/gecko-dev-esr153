@@ -4,6 +4,9 @@
 
 #include "InProcessCompositorWidget.h"
 
+#ifdef MOZ_EMBEDLITE
+#  include "EmbedLiteCompositorWidget.h"
+#endif
 #include "mozilla/VsyncDispatcher.h"
 #include "mozilla/layers/NativeLayer.h"
 #include "nsIWidget.h"
@@ -20,13 +23,20 @@ namespace widget {
 /* static */
 RefPtr<CompositorWidget> CompositorWidget::CreateLocal(
     const CompositorWidgetInitData& aInitData,
-    const layers::CompositorOptions& aOptions, nsIWidget* aWidget) {
+    const layers::CompositorOptions& aOptions, nsIWidget* aWidget,
+    bool aUseExternalSurfaceSize) {
+  (void)aUseExternalSurfaceSize;
   // We're getting crashes from storing a NULL mWidget, and this is the
   // only remaining explanation that doesn't involve memory corruption,
   // so placing a release assert here. For even more sanity-checking, we
   // do it after the static_cast.
   nsIWidget* widget = static_cast<nsIWidget*>(aWidget);
   MOZ_RELEASE_ASSERT(widget);
+#ifdef MOZ_EMBEDLITE
+  if (aUseExternalSurfaceSize) {
+    return new EmbedLiteCompositorWidget(aOptions, widget);
+  }
+#endif
   return new InProcessCompositorWidget(aOptions, widget);
 }
 #endif

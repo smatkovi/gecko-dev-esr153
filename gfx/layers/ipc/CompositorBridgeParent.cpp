@@ -1240,6 +1240,13 @@ void CompositorBridgeParent::EnsureWebRenderBridgeParentInitialized() {
   MOZ_ASSERT(mCompositorScheduler);
 }
 
+void CompositorBridgeParent::SetWebRenderGLContext(gl::GLContext*) {}
+
+bool CompositorBridgeParent::CompositeToDefaultTarget(
+    WebRenderBridgeParent*, VsyncId, wr::RenderReasons) {
+  return false;
+}
+
 void CompositorBridgeParent::NotifyMemoryPressure() {
   if (mWrBridge) {
     RefPtr<wr::WebRenderAPI> api = mWrBridge->GetWebRenderAPI();

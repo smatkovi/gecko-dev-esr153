@@ -135,6 +135,12 @@ interface nsIDOMWindowUtils : nsISupports {
    */
   AString getViewportFitInfo();
 
+  /*
+   * Bitmask of safe-area-inset-* env variables consumed while resolving
+   * computed style in the current document.
+   */
+  unsigned long getSafeAreaInsetUsageInfo();
+
   /**
    * Information about the window size in device pixels.
    */

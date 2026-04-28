@@ -1363,6 +1363,9 @@ class Document : public nsINode,
   // Returns a ViewportMetaData for this document.
   ViewportMetaData GetViewportMetaData() const;
 
+  uint8_t GetSafeAreaInsetUsage() const { return mSafeAreaInsetUsage; }
+  void NoteSafeAreaInsetUsage(uint8_t aUsage);
+
   /**
    * True iff this doc will ignore manual character encoding overrides.
    */
@@ -5617,6 +5620,8 @@ class Document : public nsINode,
   nsTHashMap<RefPtr<Element>,
              std::unique_ptr<Document, ClearParentDocumentDeleter>>
       mSubDocuments;
+  // Bitmask of safe-area-inset-* env vars (EmbedLite; unused on 153 pending re-port)
+  uint8_t mSafeAreaInsetUsage = 0;
 
   class HeaderData;
   UniquePtr<HeaderData> mHeaderData;

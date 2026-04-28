@@ -7,6 +7,8 @@
 #ifndef GLCONSTS_H_
 #define GLCONSTS_H_
 
+#include "GLTypes.h"
+
 /**
  * GENERATED FILE, DO NOT MODIFY DIRECTLY.
  * This is a file generated directly from the official OpenGL registry

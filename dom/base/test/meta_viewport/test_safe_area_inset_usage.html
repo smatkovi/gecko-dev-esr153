@@ -1,0 +1,71 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>safe-area inset usage test</title>
+  <script src="/tests/SimpleTest/SimpleTest.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css"/>
+</head>
+<body>
+  <script type="application/javascript">
+    "use strict";
+
+    const TOP = 1;
+    const BOTTOM = 4;
+
+    async function usageFor(style, property) {
+      let iframe = document.createElement("iframe");
+      iframe.srcdoc = `<!DOCTYPE html>
+        <style>${style}</style>
+        <div id="target"></div>`;
+      document.body.appendChild(iframe);
+      await new Promise(resolve => {
+        iframe.addEventListener("load", resolve, { once: true });
+      });
+
+      let win = iframe.contentWindow;
+      let target = win.document.getElementById("target");
+      if (property) {
+        win.getComputedStyle(target).getPropertyValue(property);
+      } else {
+        win.getComputedStyle(target).color;
+      }
+
+      let usage =
+        SpecialPowers.getDOMWindowUtils(win).getSafeAreaInsetUsageInfo();
+      iframe.remove();
+      return usage;
+    }
+
+    add_task(async function test_direct_safe_area_top_usage() {
+      let usage = await usageFor(
+        "#target { padding-top: env(safe-area-inset-top); }",
+        "padding-top");
+      is(usage & TOP, TOP, "direct safe-area-inset-top use is recorded");
+    });
+
+    add_task(async function test_custom_property_safe_area_top_usage() {
+      let usage = await usageFor(
+        ":root { --sat: env(safe-area-inset-top); } " +
+        "#target { padding-top: var(--sat); }",
+        "padding-top");
+      is(usage & TOP, TOP, "safe-area-inset-top use through var() is recorded");
+    });
+
+    add_task(async function test_unused_custom_property_not_recorded() {
+      let usage = await usageFor(
+        ":root { --sat: env(safe-area-inset-top); } " +
+        "#target { color: green; }");
+      is(usage, 0, "unused safe-area custom property is not recorded");
+    });
+
+    add_task(async function test_bottom_only_usage() {
+      let usage = await usageFor(
+        "#target { padding-bottom: env(safe-area-inset-bottom); }",
+        "padding-bottom");
+      is(usage & BOTTOM, BOTTOM, "safe-area-inset-bottom use is recorded");
+      is(usage & TOP, 0, "bottom-only use does not record top");
+    });
+  </script>
+</body>
+</html>

@@ -26,6 +26,10 @@
 
 namespace mozilla {
 
+namespace gl {
+class GLContext;
+}  // namespace gl
+
 namespace gfx {
 class GPUProcessManager;
 class GPUParent;
@@ -233,7 +237,8 @@ class CompositorBridgeParentBase : public PCompositorBridgeParent,
 MOZ_MAKE_ENUM_CLASS_BITWISE_OPERATORS(
     CompositorBridgeParentBase::TransformsToSkip)
 
-class CompositorBridgeParent final : public CompositorBridgeParentBase {
+class CompositorBridgeParent : public CompositorBridgeParentBase,
+                               public CompositorController {
   friend class CompositorThreadHolder;
   friend class InProcessCompositorSession;
   friend class gfx::GPUProcessManager;
@@ -556,6 +561,10 @@ class CompositorBridgeParent final : public CompositorBridgeParentBase {
       const WindowKind& aWindowKind) override;
   void EnsureWebRenderBridgeParentInitialized() override;
   RefPtr<WebRenderBridgeParent> GetWebRenderBridgeParent() const;
+  virtual void SetWebRenderGLContext(gl::GLContext* aGL);
+  virtual bool CompositeToDefaultTarget(WebRenderBridgeParent* aWrBridge,
+                                        VsyncId aId,
+                                        wr::RenderReasons aReasons);
   Maybe<TimeStamp> GetTestingTimeStamp() const;
 
   static CompositorBridgeParent* GetCompositorBridgeParentFromLayersId(

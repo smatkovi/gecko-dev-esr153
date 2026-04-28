@@ -55,6 +55,8 @@ support-files = ["viewport_helpers.js"]
 
 ["test_meta_viewport_fit_multiple.html"]
 
+["test_safe_area_inset_usage.html"]
+
 ["test_meta_viewport_fixed_width_and_zero_display_width.html"]
 
 ["test_meta_viewport_initial_scale_0_5.html"]
