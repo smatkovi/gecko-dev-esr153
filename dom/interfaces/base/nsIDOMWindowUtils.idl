@@ -53,7 +53,7 @@ webidl Node;
 webidl NodeList;
 webidl Storage;
 
-[builtinclass, scriptable, uuid(4d6732ca-9da7-4176-b8a1-8dde15cd0bf9)]
+[builtinclass, scriptable, uuid(9f625c12-2309-4d23-9ab7-9fed542c767e)]
 interface nsIDOMWindowUtils : nsISupports {
 
   /**
@@ -129,6 +129,12 @@ interface nsIDOMWindowUtils : nsISupports {
    * element.
    */
   AString getViewportFitInfo();
+
+  /*
+   * Bitmask of safe-area-inset-* env variables consumed while resolving
+   * computed style in the current document.
+   */
+  unsigned long getSafeAreaInsetUsageInfo();
 
   /**
    * Information about the window size in device pixels.

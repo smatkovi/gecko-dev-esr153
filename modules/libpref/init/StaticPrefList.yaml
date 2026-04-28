@@ -14024,7 +14024,7 @@
 - name: network.process.enabled
   type: RelaxedAtomicBool
   mirror: always
-#if defined(ANDROID) || defined(MOZ_THUNDERBIRD) || defined(XP_IOS)
+#if defined(ANDROID) || defined(MOZ_THUNDERBIRD) || defined(XP_IOS) || defined(MOZ_EMBEDLITE)
   value: false # see bug 1641427
 #else
   value: true

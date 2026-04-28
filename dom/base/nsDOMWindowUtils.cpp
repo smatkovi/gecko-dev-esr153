@@ -488,6 +488,15 @@ nsDOMWindowUtils::GetViewportFitInfo(nsAString& aViewportFit) {
 }
 
 NS_IMETHODIMP
+nsDOMWindowUtils::GetSafeAreaInsetUsageInfo(uint32_t* aSafeAreaInsetUsage) {
+  Document* doc = GetDocument();
+  NS_ENSURE_STATE(doc);
+
+  *aSafeAreaInsetUsage = doc->GetSafeAreaInsetUsage();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsDOMWindowUtils::SetMousewheelAutodir(Element* aElement, bool aEnabled,
                                        bool aHonourRoot) {
   aElement->SetProperty(nsGkAtoms::forceMousewheelAutodir,

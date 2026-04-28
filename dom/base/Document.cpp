@@ -161,6 +161,7 @@
 #include "mozilla/dom/ContentChild.h"
 #include "mozilla/dom/CSSBinding.h"
 #include "mozilla/dom/CSSCustomPropertyRegisteredEvent.h"
+#include "mozilla/dom/CustomEvent.h"
 #include "mozilla/dom/DOMImplementation.h"
 #include "mozilla/dom/DOMIntersectionObserver.h"
 #include "mozilla/dom/DOMStringList.h"
@@ -1504,6 +1505,7 @@ Document::Document(const char* aContentType)
       mViewportFit(ViewportFitType::Auto),
       mInteractiveWidgetMode(
           InteractiveWidgetUtils::DefaultInteractiveWidgetMode()),
+      mSafeAreaInsetUsage(0),
       mHeaderData(nullptr),
       mLanguageFromCharset(nullptr),
       mServoRestyleRootDirtyBits(0),
@@ -11319,6 +11321,42 @@ nsViewportInfo Document::GetViewportInfo(const ScreenIntSize& aDisplaySize) {
 ViewportMetaData Document::GetViewportMetaData() const {
   return mLastModifiedViewportMetaData ? *mLastModifiedViewportMetaData
                                        : ViewportMetaData();
+}
+
+void Document::NoteSafeAreaInsetUsage(uint8_t aUsage) {
+  const uint8_t newUsage = mSafeAreaInsetUsage | aUsage;
+  if (newUsage == mSafeAreaInsetUsage) {
+    return;
+  }
+
+  mSafeAreaInsetUsage = newUsage;
+
+  ErrorResult rv;
+  RefPtr<Event> domEvent =
+      CreateEvent(u"CustomEvent"_ns, CallerType::System, rv);
+  if (rv.Failed()) {
+    AsyncEventDispatcher::RunDOMEventWhenSafe(
+        *this, u"DOMSafeAreaInsetUsageChanged"_ns, CanBubble::eYes,
+        ChromeOnlyDispatch::eYes);
+    return;
+  }
+
+  AutoJSAPI jsapi;
+  if (!jsapi.Init(GetScopeObject())) {
+    AsyncEventDispatcher::RunDOMEventWhenSafe(
+        *this, u"DOMSafeAreaInsetUsageChanged"_ns, CanBubble::eYes,
+        ChromeOnlyDispatch::eYes);
+    return;
+  }
+
+  JS::Rooted<JS::Value> detail(jsapi.cx(), JS::Int32Value(newUsage));
+  CustomEvent* customEvent = static_cast<CustomEvent*>(domEvent.get());
+  customEvent->InitCustomEvent(jsapi.cx(), u"DOMSafeAreaInsetUsageChanged"_ns,
+                               /* aCanBubble = */ true,
+                               /* aCancelable = */ false, detail);
+  domEvent->SetTrusted(true);
+  AsyncEventDispatcher::RunDOMEventWhenSafe(
+      *this, *domEvent, ChromeOnlyDispatch::eYes);
 }
 
 static InteractiveWidget ParseInteractiveWidget(

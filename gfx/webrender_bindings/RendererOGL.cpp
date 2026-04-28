@@ -121,6 +121,7 @@ RendererOGL::RendererOGL(RefPtr<RenderThread>&& aThread,
   MOZ_ASSERT(mCompositor);
   MOZ_ASSERT(mRenderer);
   MOZ_ASSERT(mBridge);
+  mBridge->SetWebRenderGLContext(mCompositor->gl());
   MOZ_COUNT_CTOR(RendererOGL);
 }
 

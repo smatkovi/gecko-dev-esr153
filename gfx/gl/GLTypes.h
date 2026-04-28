@@ -92,9 +92,24 @@ typedef void* EGLSurface;
 typedef void* EGLClientBuffer;
 typedef void* EGLCastToRelevantPtr;
 typedef void* EGLImage;
+typedef void* EGLImageKHR;
+typedef int EGLNativeFileDescriptorKHR;
+typedef void* EGLOutputLayerEXT;
+typedef void* EGLOutputPortEXT;
 typedef void* EGLSync;
+typedef void* EGLSyncKHR;
+typedef void* EGLSyncNV;
 typedef void* EGLStreamKHR;
 typedef uint64_t EGLTime;
+typedef int64_t EGLnsecsANDROID;
+
+#ifndef EGL_CAST
+#  if defined(__cplusplus)
+#    define EGL_CAST(type, value) (static_cast<type>(value))
+#  else
+#    define EGL_CAST(type, value) ((type)(value))
+#  endif
+#endif
 
 #define EGL_NO_CONTEXT ((EGLContext)0)
 #define EGL_NO_DISPLAY ((EGLDisplay)0)

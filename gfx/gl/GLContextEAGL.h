@@ -54,7 +54,7 @@ class GLContextEAGL : public GLContext {
 
   virtual void GetWSIInfo(nsCString* const out) const override;
 
-  virtual GLuint GetDefaultFramebuffer() override { return mBackbufferFB; }
+  virtual GLuint GetDefaultFramebuffer() const override { return mBackbufferFB; }
 
  private:
   GLuint mBackbufferRB = 0;

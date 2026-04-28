@@ -40,7 +40,8 @@ RefPtr<InProcessCompositorSession> InProcessCompositorSession::Create(
   aWidget->GetCompositorWidgetInitData(&initData);
 
   RefPtr<CompositorWidget> widget =
-      CompositorWidget::CreateLocal(initData, aOptions, aWidget);
+      CompositorWidget::CreateLocal(initData, aOptions, aWidget,
+                                    aUseExternalSurfaceSize);
   RefPtr<CompositorBridgeParent> parent =
       CompositorManagerParent::CreateSameProcessWidgetCompositorBridge(
           aScale, aOptions, aUseExternalSurfaceSize, aSurfaceSize,

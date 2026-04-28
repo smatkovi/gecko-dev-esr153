@@ -671,6 +671,7 @@ class ServoStyleSet {
   void UpdateStylist();
 
   void RunPostTraversalTasks();
+  void RecordSafeAreaInsetUsage();
 
   void PrependSheetOfType(Origin, StyleSheet*);
   void AppendSheetOfType(Origin, StyleSheet*);

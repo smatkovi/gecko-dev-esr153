@@ -19,6 +19,10 @@
 #include "gfxPlatform.h"
 #include "VsyncSource.h"
 
+#if defined(MOZ_EMBEDLITE)
+#  include "mozilla/embedlite/EmbedLiteCompositorBridgeParent.h"
+#endif
+
 namespace mozilla {
 namespace layers {
 
@@ -108,9 +112,16 @@ CompositorManagerParent::CreateSameProcessWidgetCompositorBridge(
   TimeDuration vsyncRate =
       gfxPlatform::GetPlatform()->GetGlobalVsyncDispatcher()->GetVsyncRate();
 
-  RefPtr<CompositorBridgeParent> bridge = new CompositorBridgeParent(
-      sInstance, /* aNamespace */ 0, aScale, vsyncRate, aOptions,
-      aUseExternalSurfaceSize, aSurfaceSize, aInnerWindowId);
+  RefPtr<CompositorBridgeParent> bridge =
+#if defined(MOZ_EMBEDLITE)
+      new mozilla::embedlite::EmbedLiteCompositorBridgeParent(
+          0, sInstance, /* aNamespace */ 0, aScale, vsyncRate, aOptions,
+          aUseExternalSurfaceSize, aSurfaceSize, aInnerWindowId);
+#else
+      new CompositorBridgeParent(
+          sInstance, /* aNamespace */ 0, aScale, vsyncRate, aOptions,
+          aUseExternalSurfaceSize, aSurfaceSize, aInnerWindowId);
+#endif
 
   sInstance->mPendingCompositorBridges.AppendElement(bridge);
   return bridge.forget();

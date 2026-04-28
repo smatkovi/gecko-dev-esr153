@@ -27,7 +27,7 @@ use app_units::{Au, AU_PER_PX};
 use euclid::default::Size2D;
 use euclid::{Scale, SideOffsets2D};
 use servo_arc::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU8, AtomicUsize, Ordering};
 use std::{cmp, fmt};
 use style_traits::{CSSPixel, DevicePixel};
 
@@ -69,6 +69,9 @@ pub struct Device {
     /// Whether any styles computed in the document relied on the viewport size
     /// by using dvw/dvh/dvmin/dvmax units.
     used_dynamic_viewport_size: AtomicBool,
+    /// Which safe-area inset environment variables were consumed while
+    /// resolving computed style in this document.
+    safe_area_inset_usage: AtomicU8,
     /// The CssEnvironment object responsible of getting CSS environment
     /// variables.
     environment: CssEnvironment,
@@ -111,6 +114,7 @@ impl Device {
             used_font_metrics: AtomicBool::new(false),
             used_viewport_size: AtomicBool::new(false),
             used_dynamic_viewport_size: AtomicBool::new(false),
+            safe_area_inset_usage: AtomicU8::new(0),
             environment: CssEnvironment,
         }
     }
@@ -320,6 +324,7 @@ impl Device {
         self.used_viewport_size.store(false, Ordering::Relaxed);
         self.used_dynamic_viewport_size
             .store(false, Ordering::Relaxed);
+        self.safe_area_inset_usage.store(0, Ordering::Relaxed);
     }
 
     /// Returns whether we ever looked up the root font size of the device.
@@ -458,6 +463,18 @@ impl Device {
     /// Returns whether we ever looked up the dynamic viewport size of the Device.
     pub fn used_dynamic_viewport_size(&self) -> bool {
         self.used_dynamic_viewport_size.load(Ordering::Relaxed)
+    }
+
+    /// Record that computed style consumed one or more safe-area inset
+    /// environment variables.
+    pub fn note_safe_area_inset_usage(&self, usage: u8) {
+        self.safe_area_inset_usage.fetch_or(usage, Ordering::Relaxed);
+    }
+
+    /// Returns the safe-area inset usage bits seen since the last cache
+    /// rebuild.
+    pub fn safe_area_inset_usage(&self) -> u8 {
+        self.safe_area_inset_usage.load(Ordering::Relaxed)
     }
 
     /// Returns whether font metrics have been queried.

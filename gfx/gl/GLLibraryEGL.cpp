@@ -893,6 +893,23 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplay(
   return CreateDisplayLocked(forceAccel, forceSoftware, out_failureId, lock);
 }
 
+std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplay(
+    const EGLDisplay display, nsACString* const out_failureId) {
+  if (!display) {
+    if (out_failureId && out_failureId->IsEmpty()) {
+      *out_failureId = "FEATURE_FAILURE_EGL_NO_DISPLAY"_ns;
+    }
+    return nullptr;
+  }
+
+  StaticMutexAutoLock lock(sMutex);
+  auto ret = EglDisplay::Create(*this, display, false, lock);
+  if (!ret && out_failureId && out_failureId->IsEmpty()) {
+    *out_failureId = "FEATURE_FAILURE_EGL_DISPLAY"_ns;
+  }
+  return ret;
+}
+
 std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplayLocked(
     const bool forceAccel, const bool forceSoftware,
     nsACString* const out_failureId, const StaticMutexAutoLock& aProofOfLock) {

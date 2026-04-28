@@ -10,6 +10,7 @@
 #include "gfx2DGlue.h"
 #include "MozFramebuffer.h"
 #include "SharedSurface.h"
+#include "SharedSurfaceGL.h"
 #include "mozilla/gfx/BuildConstants.h"
 
 namespace mozilla::gl {
@@ -140,6 +141,65 @@ SwapChain::~SwapChain() {
   if (mDestroyedCallback) {
     mDestroyedCallback();
   }
+}
+
+// -
+// GLScreenBuffer
+
+UniquePtr<GLScreenBuffer> GLScreenBuffer::Create(GLContext* const gl,
+                                                 const gfx::IntSize& size) {
+  auto screen = MakeUnique<GLScreenBuffer>(gl);
+  screen->Morph(MakeUnique<SurfaceFactory_Basic>(*gl));
+  if (!screen->Resize(size)) {
+    return nullptr;
+  }
+  return screen;
+}
+
+GLScreenBuffer::GLScreenBuffer(GLContext* const)
+    : mSwapChain(MakeUnique<SwapChain>()) {}
+
+GLScreenBuffer::~GLScreenBuffer() = default;
+
+void GLScreenBuffer::Morph(UniquePtr<SurfaceFactory> factory) {
+  MOZ_ASSERT(factory);
+  mPresenter = nullptr;
+  mSwapChain->ClearPool();
+  mSwapChain->mFactory = std::move(factory);
+  if (!mSize.IsEmpty()) {
+    (void)Resize(mSize);
+  }
+}
+
+bool GLScreenBuffer::Resize(const gfx::IntSize& size) {
+  if (size.IsEmpty() || !mSwapChain->mFactory) {
+    return false;
+  }
+  if (mPresenter && size == mSize) {
+    return true;
+  }
+
+  mPresenter = nullptr;
+  mSize = size;
+  mPresenter = mSwapChain->Acquire(size, gfx::ColorSpace2::SRGB);
+  return bool(mPresenter);
+}
+
+bool GLScreenBuffer::PublishFrame(const gfx::IntSize& size) {
+  if (!mPresenter && !Resize(size)) {
+    return false;
+  }
+
+  mPresenter = nullptr;
+  return Resize(size);
+}
+
+const std::shared_ptr<SharedSurface>& GLScreenBuffer::FrontBuffer() const {
+  return mSwapChain->FrontBuffer();
+}
+
+GLuint GLScreenBuffer::Fb() const {
+  return mPresenter ? mPresenter->Fb() : 0;
 }
 
 }  // namespace mozilla::gl

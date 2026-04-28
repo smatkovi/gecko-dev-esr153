@@ -13,6 +13,10 @@
 #include "mozilla/gfx/Logging.h"
 #include "mozilla/webrender/RenderThread.h"
 #include "mozilla/widget/CompositorWidget.h"
+#ifdef MOZ_EMBEDLITE
+#  include "GLScreenBuffer.h"
+#  include "SharedSurfaceEGL.h"
+#endif
 
 namespace mozilla::wr {
 
@@ -22,7 +26,27 @@ extern LazyLogModule gRenderThreadLog;
 /* static */
 UniquePtr<RenderCompositor> RenderCompositorOGL::Create(
     const RefPtr<widget::CompositorWidget>& aWidget, nsACString& aError) {
-  RefPtr<gl::GLContext> gl = RenderThread::Get()->SingletonGL();
+  RefPtr<gl::GLContext> gl;
+#ifdef MOZ_EMBEDLITE
+  const bool useEmbedLiteOffscreen =
+      aWidget && aWidget->IsEmbedLiteOffscreen();
+  if (useEmbedLiteOffscreen) {
+    nsCString failureId;
+    gl = gl::GLContextProvider::CreateHeadless(
+        {gl::CreateContextFlags::PREFER_ES3}, &failureId);
+    if (!gl) {
+      aError.Assign(failureId);
+      return nullptr;
+    }
+  }
+  if (!useEmbedLiteOffscreen) {
+    gl = RenderThread::Get()->SingletonGL();
+  }
+#else
+  if (!gl) {
+    gl = RenderThread::Get()->SingletonGL();
+  }
+#endif
   if (!gl) {
     gl = gl::GLContextProvider::CreateForCompositorWidget(
         aWidget, /* aHardwareWebRender */ true, /* aForceAccelerated */ true);
@@ -63,6 +87,31 @@ bool RenderCompositorOGL::BeginFrame() {
     return false;
   }
 
+#ifdef MOZ_EMBEDLITE
+  if (mWidget && mWidget->IsEmbedLiteOffscreen()) {
+    const auto size = GetBufferSize().ToUnknownSize();
+    if (size.IsEmpty()) {
+      return false;
+    }
+    if (mGL->Screen()) {
+      if (mGL->Screen()->Size() != size && !mGL->ResizeScreenBuffer(size)) {
+        return false;
+      }
+    } else if (!mGL->CreateOffscreenScreenBuffer(size)) {
+      return false;
+    } else if (mGL->GetContextType() == gl::GLContextType::EGL) {
+      if (UniquePtr<gl::SurfaceFactory> factory =
+              gl::SurfaceFactory_EGLImage::Create(*mGL)) {
+        mGL->Screen()->Morph(std::move(factory));
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+#endif
+
   mGL->fBindFramebuffer(LOCAL_GL_FRAMEBUFFER, mGL->GetDefaultFramebuffer());
 
   return true;
@@ -89,6 +138,11 @@ RenderedFrameId RenderCompositorOGL::EndFrame(
     }
     gl()->SetDamage(bufferInvalid);
   }
+#ifdef MOZ_EMBEDLITE
+  if (mWidget && mWidget->IsEmbedLiteOffscreen()) {
+    return frameId;
+  }
+#endif
   mGL->SwapBuffers();
   return frameId;
 }
@@ -108,6 +162,11 @@ uint32_t RenderCompositorOGL::GetMaxPartialPresentRects() {
 bool RenderCompositorOGL::RequestFullRender() { return false; }
 
 bool RenderCompositorOGL::UsePartialPresent() {
+#ifdef MOZ_EMBEDLITE
+  if (mWidget && mWidget->IsEmbedLiteOffscreen()) {
+    return false;
+  }
+#endif
   return gfx::gfxVars::WebRenderMaxPartialPresentRects() > 0;
 }
 
@@ -116,6 +175,11 @@ bool RenderCompositorOGL::ShouldDrawPreviousPartialPresentRegions() {
 }
 
 size_t RenderCompositorOGL::GetBufferAge() const {
+#ifdef MOZ_EMBEDLITE
+  if (mWidget && mWidget->IsEmbedLiteOffscreen()) {
+    return 0;
+  }
+#endif
   if (!StaticPrefs::
           gfx_webrender_allow_partial_present_buffer_age_AtStartup()) {
     return 0;

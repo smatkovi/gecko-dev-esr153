@@ -44,7 +44,7 @@ class nsBaseAppShell : public nsIAppShell,
    * This method is called by subclasses when the app shell singleton is
    * instantiated.
    */
-  nsresult Init();
+  nsresult Init(bool aUseNativeEventProcessing = true);
 
   /**
    * Called by subclasses from a native event. See ScheduleNativeEventCallback.

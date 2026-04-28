@@ -2698,6 +2698,15 @@ bool GLContext::CreateOffscreenDefaultFb(const gfx::IntSize& size) {
   return bool(mOffscreenDefaultFb);
 }
 
+bool GLContext::CreateOffscreenScreenBuffer(const gfx::IntSize& size) {
+  mScreen = GLScreenBuffer::Create(this, size);
+  return bool(mScreen);
+}
+
+bool GLContext::ResizeScreenBuffer(const gfx::IntSize& size) {
+  return mScreen && mScreen->Resize(size);
+}
+
 // Some of Mesa's drivers allocate heap memory when loaded and don't
 // free it when unloaded; this causes Leak Sanitizer to detect leaks and
 // fail to unwind the stack, so suppressions don't work.  This

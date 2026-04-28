@@ -36,16 +36,23 @@ class Thread : PlatformThread::Delegate {
     uint32_t transient_hang_timeout;
     uint32_t permanent_hang_timeout;
 
+    // If false, StartWithOptions returns once message_loop() is available,
+    // before Init() runs. This is for embedders whose Init() can re-enter the
+    // thread that started them.
+    bool wait_for_init;
+
     Options()
         : message_loop_type(MessageLoop::TYPE_DEFAULT),
           stack_size(0),
           transient_hang_timeout(0),
-          permanent_hang_timeout(0) {}
+          permanent_hang_timeout(0),
+          wait_for_init(true) {}
     Options(MessageLoop::Type type, size_t size)
         : message_loop_type(type),
           stack_size(size),
           transient_hang_timeout(0),
-          permanent_hang_timeout(0) {}
+          permanent_hang_timeout(0),
+          wait_for_init(true) {}
   };
 
   // Constructor.

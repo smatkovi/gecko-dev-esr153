@@ -247,6 +247,9 @@ impl Device {
         self.used_viewport_units.load(Ordering::Relaxed)
     }
 
+    /// Servo does not expose safe-area usage to an embedding document.
+    pub fn note_safe_area_inset_usage(&self, _: u8) {}
+
     /// Returns the number of app units per device pixel we're using currently.
     pub fn app_units_per_device_pixel(&self) -> i32 {
         (AU_PER_PX as f32 / self.device_pixel_ratio.0) as i32

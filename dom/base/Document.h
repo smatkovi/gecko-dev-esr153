@@ -1283,6 +1283,9 @@ class Document : public nsINode,
   // Returns a ViewportMetaData for this document.
   ViewportMetaData GetViewportMetaData() const;
 
+  uint8_t GetSafeAreaInsetUsage() const { return mSafeAreaInsetUsage; }
+  void NoteSafeAreaInsetUsage(uint8_t aUsage);
+
   /**
    * True iff this doc will ignore manual character encoding overrides.
    */
@@ -5343,6 +5346,10 @@ class Document : public nsINode,
 
   // https://drafts.csswg.org/css-viewport/#interactive-widget-section
   dom::InteractiveWidget mInteractiveWidgetMode;
+
+  // Bitmask of safe-area-inset-* environment variables consumed while
+  // resolving computed style in this document.
+  uint8_t mSafeAreaInsetUsage;
 
   // XXXdholbert This should really be modernized to a nsTHashMap or similar,
   // though note that the modernization will need to take care to also convert

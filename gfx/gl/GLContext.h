@@ -33,6 +33,7 @@
 #include "mozilla/ThreadLocal.h"
 
 #include "MozFramebuffer.h"
+#include "GLScreenBuffer.h"
 #include "nsTArray.h"
 #include "GLConsts.h"
 #include "GLDefs.h"
@@ -60,6 +61,7 @@ namespace mozilla {
 namespace gl {
 class GLBlitHelper;
 class GLLibraryEGL;
+class GLScreenBuffer;
 class GLReadTexImageHelper;
 class SharedSurface;
 class SymbolLoader;
@@ -319,10 +321,17 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
    * Get the default framebuffer for this context.
    */
   UniquePtr<MozFramebuffer> mOffscreenDefaultFb;
+  UniquePtr<GLScreenBuffer> mScreen;
 
   bool CreateOffscreenDefaultFb(const gfx::IntSize& size);
+  bool CreateOffscreenScreenBuffer(const gfx::IntSize& size);
+  bool ResizeScreenBuffer(const gfx::IntSize& size);
+  GLScreenBuffer* Screen() const { return mScreen.get(); }
 
-  virtual GLuint GetDefaultFramebuffer() {
+  virtual GLuint GetDefaultFramebuffer() const {
+    if (mScreen) {
+      return mScreen->Fb();
+    }
     if (mOffscreenDefaultFb) {
       return mOffscreenDefaultFb->mFB;
     }
@@ -2061,6 +2070,8 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
     if (!IsSupported(gl::GLFeature::framebuffer_blit)) {
       target = LOCAL_GL_FRAMEBUFFER;
     }
+
+    const GLuint realFb = (!fb && mScreen) ? mScreen->Fb() : fb;
     if (mElideDuplicateBindFramebuffers) {
       MOZ_ASSERT(mCachedDrawFb ==
                  GetIntAs<GLuint>(LOCAL_GL_DRAW_FRAMEBUFFER_BINDING));
@@ -2069,31 +2080,31 @@ class GLContext : public GenericAtomicRefCounted, public SupportsWeakPtr {
 
       switch (target) {
         case LOCAL_GL_FRAMEBUFFER:
-          if (mCachedDrawFb == fb && mCachedReadFb == fb) return;
+          if (mCachedDrawFb == realFb && mCachedReadFb == realFb) return;
           break;
         case LOCAL_GL_DRAW_FRAMEBUFFER:
-          if (mCachedDrawFb == fb) return;
+          if (mCachedDrawFb == realFb) return;
           break;
         case LOCAL_GL_READ_FRAMEBUFFER:
-          if (mCachedReadFb == fb) return;
+          if (mCachedReadFb == realFb) return;
           break;
       }
     }
 
     BEFORE_GL_CALL;
-    mSymbols.fBindFramebuffer(target, fb);
+    mSymbols.fBindFramebuffer(target, realFb);
     AFTER_GL_CALL;
 
     switch (target) {
       case LOCAL_GL_FRAMEBUFFER:
-        mCachedDrawFb = fb;
-        mCachedReadFb = fb;
+        mCachedDrawFb = realFb;
+        mCachedReadFb = realFb;
         break;
       case LOCAL_GL_DRAW_FRAMEBUFFER:
-        mCachedDrawFb = fb;
+        mCachedDrawFb = realFb;
         break;
       case LOCAL_GL_READ_FRAMEBUFFER:
-        mCachedReadFb = fb;
+        mCachedReadFb = realFb;
         break;
     }
   }

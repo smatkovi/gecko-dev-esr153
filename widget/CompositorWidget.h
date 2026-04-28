@@ -38,6 +38,7 @@ namespace widget {
 class WinCompositorWidget;
 class GtkCompositorWidget;
 class AndroidCompositorWidget;
+class EmbedLiteCompositorWidget;
 class CompositorWidgetInitData;
 
 // Gecko widgets usually need to communicate with the CompositorWidget with
@@ -95,7 +96,8 @@ class CompositorWidget {
    */
   static RefPtr<CompositorWidget> CreateLocal(
       const CompositorWidgetInitData& aInitData,
-      const layers::CompositorOptions& aOptions, nsIWidget* aWidget);
+      const layers::CompositorOptions& aOptions, nsIWidget* aWidget,
+      bool aUseExternalSurfaceSize = false);
 
   /**
    * Called before rendering using OMTC. Returns false when the widget is
@@ -267,6 +269,10 @@ class CompositorWidget {
   virtual WinCompositorWidget* AsWindows() { return nullptr; }
   virtual GtkCompositorWidget* AsGTK() { return nullptr; }
   virtual AndroidCompositorWidget* AsAndroid() { return nullptr; }
+#ifdef MOZ_EMBEDLITE
+  virtual EmbedLiteCompositorWidget* AsEmbedLite() { return nullptr; }
+  virtual bool IsEmbedLiteOffscreen() const { return false; }
+#endif
 
   /**
    * Return the platform-specific delegate for the widget, if any.

@@ -37,10 +37,10 @@ nsBaseAppShell::nsBaseAppShell()
 
 nsBaseAppShell::~nsBaseAppShell() = default;
 
-nsresult nsBaseAppShell::Init() {
+nsresult nsBaseAppShell::Init(bool aUseNativeEventProcessing) {
   // Configure ourselves as an observer for the current thread:
 
-  if (XRE_UseNativeEventProcessing()) {
+  if (aUseNativeEventProcessing && XRE_UseNativeEventProcessing()) {
     nsCOMPtr<nsIThreadInternal> threadInt =
         do_QueryInterface(NS_GetCurrentThread());
     NS_ENSURE_STATE(threadInt);

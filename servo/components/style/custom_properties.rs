@@ -40,6 +40,11 @@ use std::ops::{Index, IndexMut};
 use std::{cmp, num};
 use style_traits::{CssWriter, ParseError, StyleParseErrorKind, ToCss};
 
+const SAFE_AREA_INSET_TOP: u8 = 1;
+const SAFE_AREA_INSET_RIGHT: u8 = 2;
+const SAFE_AREA_INSET_BOTTOM: u8 = 4;
+const SAFE_AREA_INSET_LEFT: u8 = 8;
+
 /// The environment from which to get `env` function values.
 ///
 /// TODO(emilio): If this becomes a bit more complex we should probably move it
@@ -52,6 +57,7 @@ type EnvironmentEvaluator = fn(device: &Device, url_data: &UrlExtraData) -> Vari
 struct EnvironmentVariable {
     name: Atom,
     evaluator: EnvironmentEvaluator,
+    safe_area_inset_usage: u8,
 }
 
 macro_rules! make_variable {
@@ -59,6 +65,14 @@ macro_rules! make_variable {
         EnvironmentVariable {
             name: $name,
             evaluator: $evaluator,
+            safe_area_inset_usage: 0,
+        }
+    }};
+    ($name:expr, $evaluator:expr, $usage:expr) => {{
+        EnvironmentVariable {
+            name: $name,
+            evaluator: $evaluator,
+            safe_area_inset_usage: $usage,
         }
     }};
 }
@@ -108,10 +122,26 @@ fn get_scrollbar_inline_size(device: &Device, url_data: &UrlExtraData) -> Variab
 }
 
 static ENVIRONMENT_VARIABLES: [EnvironmentVariable; 4] = [
-    make_variable!(atom!("safe-area-inset-top"), get_safearea_inset_top),
-    make_variable!(atom!("safe-area-inset-bottom"), get_safearea_inset_bottom),
-    make_variable!(atom!("safe-area-inset-left"), get_safearea_inset_left),
-    make_variable!(atom!("safe-area-inset-right"), get_safearea_inset_right),
+    make_variable!(
+        atom!("safe-area-inset-top"),
+        get_safearea_inset_top,
+        SAFE_AREA_INSET_TOP
+    ),
+    make_variable!(
+        atom!("safe-area-inset-bottom"),
+        get_safearea_inset_bottom,
+        SAFE_AREA_INSET_BOTTOM
+    ),
+    make_variable!(
+        atom!("safe-area-inset-left"),
+        get_safearea_inset_left,
+        SAFE_AREA_INSET_LEFT
+    ),
+    make_variable!(
+        atom!("safe-area-inset-right"),
+        get_safearea_inset_right,
+        SAFE_AREA_INSET_RIGHT
+    ),
 ];
 
 #[cfg(feature = "gecko")]
@@ -200,7 +230,9 @@ impl CssEnvironment {
     #[inline]
     fn get(&self, name: &Atom, device: &Device, url_data: &UrlExtraData) -> Option<VariableValue> {
         if let Some(var) = ENVIRONMENT_VARIABLES.iter().find(|var| var.name == *name) {
-            return Some((var.evaluator)(device, url_data));
+            let mut value = (var.evaluator)(device, url_data);
+            value.safe_area_inset_usage = var.safe_area_inset_usage;
+            return Some(value);
         }
         if !url_data.chrome_rules_enabled() {
             return None;
@@ -245,6 +277,9 @@ pub struct VariableValue {
 
     /// var(), env(), or non-custom property (e.g. through `em`) references.
     references: References,
+
+    /// Safe-area inset variables consumed while resolving this value.
+    safe_area_inset_usage: u8,
 }
 
 trivial_to_computed_value!(VariableValue);
@@ -518,6 +553,7 @@ impl VariableValue {
             first_token_type: Default::default(),
             url_data: url_data.clone(),
             references: Default::default(),
+            safe_area_inset_usage: 0,
         }
     }
 
@@ -535,6 +571,7 @@ impl VariableValue {
             first_token_type,
             last_token_type,
             references: Default::default(),
+            safe_area_inset_usage: 0,
         }
     }
 
@@ -615,6 +652,7 @@ impl VariableValue {
             first_token_type,
             last_token_type,
             references,
+            safe_area_inset_usage: 0,
         })
     }
 
@@ -688,6 +726,7 @@ impl VariableValue {
             first_token_type: token_type,
             last_token_type: token_type,
             references: Default::default(),
+            safe_area_inset_usage: 0,
         }
     }
 
@@ -1918,6 +1957,7 @@ struct Substitution<'a> {
     css: Cow<'a, str>,
     first_token_type: TokenSerializationType,
     last_token_type: TokenSerializationType,
+    safe_area_inset_usage: u8,
 }
 
 impl<'a> Substitution<'a> {
@@ -1926,6 +1966,7 @@ impl<'a> Substitution<'a> {
             css: v.css.into(),
             first_token_type: v.first_token_type,
             last_token_type: v.last_token_type,
+            safe_area_inset_usage: v.safe_area_inset_usage,
         }
     }
 
@@ -1942,6 +1983,7 @@ impl<'a> Substitution<'a> {
                 last_token_type: self.last_token_type,
                 url_data: url_data.clone(),
                 references: Default::default(),
+                safe_area_inset_usage: self.safe_area_inset_usage,
             })))
         }
         compute_value(&self.css, url_data, registration, computed_context)
@@ -1956,6 +1998,7 @@ impl<'a> Substitution<'a> {
             css: Cow::Borrowed(css),
             first_token_type,
             last_token_type,
+            safe_area_inset_usage: 0,
         }
     }
 }
@@ -2050,6 +2093,7 @@ fn do_substitute_chunk<'a>(
             substitution.first_token_type,
             substitution.last_token_type,
         )?;
+        substituted.safe_area_inset_usage |= substitution.safe_area_inset_usage;
         next_token_type = reference.next_token_type;
         cur_pos = reference.end;
     }
@@ -2136,7 +2180,7 @@ pub fn substitute<'a>(
     custom_properties: &'a ComputedCustomProperties,
     stylist: &Stylist,
     computed_context: &computed::Context,
-) -> Result<Cow<'a, str>, ()> {
+) -> Result<(Cow<'a, str>, u8), ()> {
     debug_assert!(variable_value.has_references());
     let v = substitute_internal(
         variable_value,
@@ -2144,5 +2188,5 @@ pub fn substitute<'a>(
         stylist,
         computed_context,
     )?;
-    Ok(v.css)
+    Ok((v.css, v.safe_area_inset_usage))
 }

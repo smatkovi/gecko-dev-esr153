@@ -288,6 +288,14 @@ UNIFIED_SOURCES += [
     "WidgetUtils.cpp",
 ]
 
+if CONFIG["MOZ_EMBEDLITE"]:
+    EXPORTS.mozilla.widget += [
+        "EmbedLiteCompositorWidget.h",
+    ]
+    UNIFIED_SOURCES += [
+        "EmbedLiteCompositorWidget.cpp",
+    ]
+
 if CONFIG["OS_ARCH"] == "Linux":
     EXPORTS.mozilla.widget += ["LSBUtils.h"]
     SOURCES += ["LSBUtils.cpp"]

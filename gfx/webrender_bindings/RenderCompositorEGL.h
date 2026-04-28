@@ -20,7 +20,8 @@ class RenderCompositorEGL : public RenderCompositor {
       const RefPtr<widget::CompositorWidget>& aWidget, nsACString& aError);
 
   explicit RenderCompositorEGL(const RefPtr<widget::CompositorWidget>& aWidget,
-                               RefPtr<gl::GLContext>&& aGL);
+                               RefPtr<gl::GLContext>&& aGL,
+                               bool aUseEmbedLiteOffscreen = false);
   virtual ~RenderCompositorEGL();
 
   bool BeginFrame() override;
@@ -53,9 +54,14 @@ class RenderCompositorEGL : public RenderCompositor {
 
   void DestroyEGLSurface();
 
+#ifdef MOZ_EMBEDLITE
+  bool EnsureEmbedLiteOffscreenTarget();
+#endif
+
   RefPtr<gl::GLContext> mGL;
 
   EGLSurface mEGLSurface;
+  bool mUseEmbedLiteOffscreen;
 
   // Whether we are in the process of handling a NEW_SURFACE error. On Android
   // this is used to allow the widget an opportunity to recover from the first

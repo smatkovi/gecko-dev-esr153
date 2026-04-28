@@ -3012,6 +3012,12 @@ WebRenderBridgeParentRef::~WebRenderBridgeParentRef() {
 
 void WebRenderBridgeParent::CompositeToDefaultTarget(
     VsyncId aId, wr::RenderReasons aReasons) {
+  if (CompositorBridgeParent* cbp = GetRootCompositorBridgeParent()) {
+    if (cbp->CompositeToDefaultTarget(this, aId, aReasons)) {
+      return;
+    }
+  }
+
   CompositeToTarget(aId, aReasons, nullptr, nullptr);
 }
 

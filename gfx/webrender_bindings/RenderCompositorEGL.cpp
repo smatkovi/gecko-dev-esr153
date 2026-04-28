@@ -16,6 +16,10 @@
 #include "mozilla/layers/BuildConstants.h"
 #include "mozilla/webrender/RenderThread.h"
 #include "mozilla/widget/CompositorWidget.h"
+#ifdef MOZ_EMBEDLITE
+#  include "GLScreenBuffer.h"
+#  include "SharedSurfaceEGL.h"
+#endif
 
 #ifdef MOZ_WIDGET_GTK
 #  include "mozilla/WidgetUtilsGtk.h"
@@ -41,7 +45,28 @@ UniquePtr<RenderCompositor> RenderCompositorEGL::Create(
   if (kIsLinux && !gfx::gfxVars::UseEGL()) {
     return nullptr;
   }
-  RefPtr<gl::GLContext> gl = RenderThread::Get()->SingletonGL(aError);
+  RefPtr<gl::GLContext> gl;
+  bool useEmbedLiteOffscreen = false;
+#ifdef MOZ_EMBEDLITE
+  useEmbedLiteOffscreen = aWidget && aWidget->IsEmbedLiteOffscreen();
+  if (useEmbedLiteOffscreen) {
+    nsCString failureId;
+    gl = gl::GLContextProvider::CreateHeadless(
+        {gl::CreateContextFlags::PREFER_ES3}, &failureId);
+    if (!gl && aError.IsEmpty()) {
+      aError.Assign(failureId);
+    }
+    if (!gl) {
+      if (aError.IsEmpty()) {
+        aError.Assign("RcEGL(no EmbedLite headless GL)"_ns);
+      }
+      return nullptr;
+    }
+  }
+#endif
+  if (!gl) {
+    gl = RenderThread::Get()->SingletonGL(aError);
+  }
   if (!gl) {
     if (aError.IsEmpty()) {
       aError.Assign("RcANGLE(no shared GL)"_ns);
@@ -50,7 +75,9 @@ UniquePtr<RenderCompositor> RenderCompositorEGL::Create(
     }
     return nullptr;
   }
-  return MakeUnique<RenderCompositorEGL>(aWidget, std::move(gl));
+  RenderThread::MaybeEnableGLDebugMessage(gl);
+  return MakeUnique<RenderCompositorEGL>(aWidget, std::move(gl),
+                                         useEmbedLiteOffscreen);
 }
 
 EGLSurface RenderCompositorEGL::CreateEGLSurface() {
@@ -68,8 +95,11 @@ EGLSurface RenderCompositorEGL::CreateEGLSurface() {
 
 RenderCompositorEGL::RenderCompositorEGL(
     const RefPtr<widget::CompositorWidget>& aWidget,
-    RefPtr<gl::GLContext>&& aGL)
-    : RenderCompositor(aWidget), mGL(aGL), mEGLSurface(EGL_NO_SURFACE) {
+    RefPtr<gl::GLContext>&& aGL, bool aUseEmbedLiteOffscreen)
+    : RenderCompositor(aWidget),
+      mGL(aGL),
+      mEGLSurface(EGL_NO_SURFACE),
+      mUseEmbedLiteOffscreen(aUseEmbedLiteOffscreen) {
   MOZ_ASSERT(mGL);
   LOG("RenderCompositorEGL::RenderCompositorEGL()");
 }
@@ -82,11 +112,53 @@ RenderCompositorEGL::~RenderCompositorEGL() {
   DestroyEGLSurface();
 }
 
-bool RenderCompositorEGL::BeginFrame() {
-  if (kIsLinux && mEGLSurface == EGL_NO_SURFACE) {
-    gfxCriticalNote
-        << "We don't have EGLSurface to draw into. Called too early?";
+#ifdef MOZ_EMBEDLITE
+bool RenderCompositorEGL::EnsureEmbedLiteOffscreenTarget() {
+  MOZ_ASSERT(mUseEmbedLiteOffscreen);
+  const auto size = GetBufferSize().ToUnknownSize();
+  if (size.IsEmpty()) {
     return false;
+  }
+  if (!gl()->MakeCurrent()) {
+    return false;
+  }
+  if (gl()->Screen()) {
+    if (gl()->Screen()->Size() == size) {
+      return true;
+    }
+    return gl()->ResizeScreenBuffer(size);
+  }
+  if (!gl()->CreateOffscreenScreenBuffer(size)) {
+    return false;
+  }
+  if (gl()->GetContextType() == gl::GLContextType::EGL) {
+    if (UniquePtr<gl::SurfaceFactory> factory =
+            gl::SurfaceFactory_EGLImage::Create(*gl())) {
+      gl()->Screen()->Morph(std::move(factory));
+      return true;
+    }
+    return false;
+  }
+  return false;
+}
+#endif
+
+bool RenderCompositorEGL::BeginFrame() {
+#ifdef MOZ_EMBEDLITE
+  if (mUseEmbedLiteOffscreen && !EnsureEmbedLiteOffscreenTarget()) {
+    gfxCriticalNote << "Failed to prepare EmbedLite offscreen target.";
+    return false;
+  }
+  const bool hasOffscreenTarget = mUseEmbedLiteOffscreen;
+#else
+  const bool hasOffscreenTarget = false;
+#endif
+  if (kIsLinux && mEGLSurface == EGL_NO_SURFACE) {
+    if (!hasOffscreenTarget) {
+      gfxCriticalNote
+          << "We don't have EGLSurface to draw into. Called too early?";
+      return false;
+    }
   }
 #ifdef MOZ_WAYLAND
   if (mWidget->AsGTK()) {
@@ -101,6 +173,12 @@ bool RenderCompositorEGL::BeginFrame() {
     gfxCriticalNote << "Failed to make render context current, can't draw.";
     return false;
   }
+
+#ifdef MOZ_EMBEDLITE
+  if (mUseEmbedLiteOffscreen) {
+    gl()->fBindFramebuffer(LOCAL_GL_FRAMEBUFFER, gl()->GetDefaultFramebuffer());
+  }
+#endif
 
 #ifdef MOZ_WIDGET_ANDROID
   java::GeckoSurfaceTexture::DestroyUnused((int64_t)gl());
@@ -136,6 +214,11 @@ RenderedFrameId RenderCompositorEGL::EndFrame(
     return frameId;
   }
 #endif
+#ifdef MOZ_EMBEDLITE
+  if (mUseEmbedLiteOffscreen) {
+    return frameId;
+  }
+#endif
   if (mEGLSurface != EGL_NO_SURFACE && aDirtyRects.Length() > 0) {
     gfx::IntRegion bufferInvalid;
     const auto bufferSize = GetBufferSize();
@@ -154,7 +237,6 @@ RenderedFrameId RenderCompositorEGL::EndFrame(
     }
     gl()->SetDamage(bufferInvalid);
   }
-
 #ifdef MOZ_WIDGET_GTK
   // Rendering on Wayland has to be atomic (buffer attach + commit) and
   // wayland surface is also used by main thread so lock it before
@@ -171,6 +253,12 @@ RenderedFrameId RenderCompositorEGL::EndFrame(
 void RenderCompositorEGL::Pause() { DestroyEGLSurface(); }
 
 bool RenderCompositorEGL::Resume() {
+#ifdef MOZ_EMBEDLITE
+  if (mUseEmbedLiteOffscreen) {
+    DestroyEGLSurface();
+    return EnsureEmbedLiteOffscreenTarget();
+  }
+#endif
   if (kIsAndroid) {
     // Destroy EGLSurface if it exists.
     DestroyEGLSurface();
@@ -230,11 +318,23 @@ bool RenderCompositorEGL::Resume() {
   return true;
 }
 
-bool RenderCompositorEGL::IsPaused() { return mEGLSurface == EGL_NO_SURFACE; }
+bool RenderCompositorEGL::IsPaused() {
+#ifdef MOZ_EMBEDLITE
+  if (mUseEmbedLiteOffscreen) {
+    return false;
+  }
+#endif
+  return mEGLSurface == EGL_NO_SURFACE;
+}
 
 bool RenderCompositorEGL::MakeCurrent() {
-  const auto& gle = gl::GLContextEGL::Cast(gl());
+#ifdef MOZ_EMBEDLITE
+  if (mUseEmbedLiteOffscreen) {
+    return gl()->MakeCurrent();
+  }
+#endif
 
+  const auto& gle = gl::GLContextEGL::Cast(gl());
   gle->SetEGLSurfaceOverride(mEGLSurface);
   bool ok = gl()->MakeCurrent();
   if (!gl()->IsGLES() && ok && mEGLSurface != EGL_NO_SURFACE) {
@@ -273,6 +373,11 @@ LayoutDeviceIntSize RenderCompositorEGL::GetBufferSize() {
 }
 
 bool RenderCompositorEGL::UsePartialPresent() {
+#ifdef MOZ_EMBEDLITE
+  if (mUseEmbedLiteOffscreen) {
+    return false;
+  }
+#endif
   return gfx::gfxVars::WebRenderMaxPartialPresentRects() > 0;
 }
 
@@ -287,6 +392,11 @@ bool RenderCompositorEGL::ShouldDrawPreviousPartialPresentRegions() {
 }
 
 size_t RenderCompositorEGL::GetBufferAge() const {
+#ifdef MOZ_EMBEDLITE
+  if (mUseEmbedLiteOffscreen) {
+    return 0;
+  }
+#endif
   if (!StaticPrefs::
           gfx_webrender_allow_partial_present_buffer_age_AtStartup()) {
     return 0;
@@ -296,6 +406,11 @@ size_t RenderCompositorEGL::GetBufferAge() const {
 
 void RenderCompositorEGL::SetBufferDamageRegion(const wr::DeviceIntRect* aRects,
                                                 size_t aNumRects) {
+#ifdef MOZ_EMBEDLITE
+  if (mUseEmbedLiteOffscreen) {
+    return;
+  }
+#endif
   const auto& gle = gl::GLContextEGL::Cast(gl());
   const auto& egl = gle->mEgl;
   if (gle->HasKhrPartialUpdate() &&

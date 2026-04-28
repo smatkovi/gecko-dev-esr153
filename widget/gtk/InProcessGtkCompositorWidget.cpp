@@ -16,7 +16,9 @@ namespace mozilla::widget {
 /* static */
 RefPtr<CompositorWidget> CompositorWidget::CreateLocal(
     const CompositorWidgetInitData& aInitData,
-    const layers::CompositorOptions& aOptions, nsIWidget* aWidget) {
+    const layers::CompositorOptions& aOptions, nsIWidget* aWidget,
+    bool aUseExternalSurfaceSize) {
+  (void)aUseExternalSurfaceSize;
   if (aInitData.type() ==
       CompositorWidgetInitData::THeadlessCompositorWidgetInitData) {
     return new HeadlessCompositorWidget(

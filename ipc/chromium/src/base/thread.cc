@@ -148,6 +148,7 @@ void Thread::StopSoon() {
 void Thread::ThreadMain() {
   nsCOMPtr<nsIThread> xpcomThread;
   auto loopType = startup_data_->options.message_loop_type;
+  bool waitForInit = startup_data_->options.wait_for_init;
   if (loopType == MessageLoop::TYPE_MOZILLA_NONMAINTHREAD ||
       loopType == MessageLoop::TYPE_MOZILLA_NONMAINUITHREAD) {
     auto queue = mozilla::MakeRefPtr<mozilla::ThreadEventQueue>(
@@ -175,11 +176,16 @@ void Thread::ThreadMain() {
                                  startup_data_->options.permanent_hang_timeout);
   message_loop_ = &message_loop;
 
+  if (!waitForInit) {
+    startup_data_->event.Signal();
+  }
+
   // Let the thread do extra initialization.
-  // Let's do this before signaling we are started.
   Init();
 
-  startup_data_->event.Signal();
+  if (waitForInit) {
+    startup_data_->event.Signal();
+  }
   // startup_data_ can't be touched anymore since the starting thread is now
   // unlocked.
 

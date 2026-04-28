@@ -111,6 +111,9 @@ bool Servo_CounterStyleRule_SetDescriptor(
     const StyleLockedCounterStyleRule* rule, nsCSSCounterDesc desc,
     const nsACString* value);
 
+uint8_t Servo_StyleSet_GetSafeAreaInsetUsage(
+    const StylePerDocumentStyleData* raw_data);
+
 }  // extern "C"
 
 #pragma GCC diagnostic pop

@@ -99,6 +99,7 @@ class MOZ_RAII AutoSetInServoTraversal {
   ~AutoSetInServoTraversal() {
     MOZ_ASSERT(sInServoTraversal);
     sInServoTraversal = nullptr;
+    mSet->RecordSafeAreaInsetUsage();
     mSet->RunPostTraversalTasks();
   }
 
@@ -1383,6 +1384,13 @@ void ServoStyleSet::RunPostTraversalTasks() {
 
   for (auto& task : tasks) {
     task.Run();
+  }
+}
+
+void ServoStyleSet::RecordSafeAreaInsetUsage() {
+  uint8_t usage = Servo_StyleSet_GetSafeAreaInsetUsage(mRawData.get());
+  if (usage) {
+    mDocument->NoteSafeAreaInsetUsage(usage);
   }
 }
 

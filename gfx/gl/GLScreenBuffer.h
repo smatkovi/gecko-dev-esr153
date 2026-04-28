@@ -28,6 +28,8 @@ namespace gl {
 
 class SharedSurface;
 class SurfaceFactory;
+class GLContext;
+class GLScreenBuffer;
 class SwapChain;
 
 class SwapChainPresenter final {
@@ -88,6 +90,25 @@ class SwapChain final {
     mDestroyedCallback = std::move(aDestroyedCallback);
     mPool = {};
   }
+};
+
+class GLScreenBuffer final {
+  UniquePtr<SwapChain> mSwapChain;
+  UniquePtr<SwapChainPresenter> mPresenter;
+  gfx::IntSize mSize;
+
+ public:
+  static UniquePtr<GLScreenBuffer> Create(GLContext*, const gfx::IntSize&);
+
+  explicit GLScreenBuffer(GLContext*);
+  ~GLScreenBuffer();
+
+  void Morph(UniquePtr<SurfaceFactory>);
+  bool Resize(const gfx::IntSize&);
+  bool PublishFrame(const gfx::IntSize&);
+  const gfx::IntSize& Size() const { return mSize; }
+  const std::shared_ptr<SharedSurface>& FrontBuffer() const;
+  GLuint Fb() const;
 };
 
 }  // namespace gl
