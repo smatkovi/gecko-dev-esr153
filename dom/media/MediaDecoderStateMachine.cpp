@@ -3382,7 +3382,9 @@ RefPtr<ShutdownPromise> MediaDecoderStateMachine::ShutdownState::Enter() {
   // ensure that we have an empty media queue before seeking the demuxer.
   master->StopMediaSink();
   master->ResetDecode();
-  master->mMediaSink->Shutdown();
+  if (master->mMediaSink) {
+    master->mMediaSink->Shutdown();
+  }
 
   // Prevent dangling pointers by disconnecting the listeners.
   master->mAudioQueueListener.Disconnect();
@@ -3620,7 +3622,7 @@ bool MediaDecoderStateMachine::IsVideoDecoding() {
 
 bool MediaDecoderStateMachine::IsPlaying() const {
   MOZ_ASSERT(OnTaskQueue());
-  return mMediaSink->IsPlaying();
+  return mMediaSink && mMediaSink->IsPlaying();
 }
 
 void MediaDecoderStateMachine::SetMediaNotSeekable() { mMediaSeekable = false; }
@@ -3780,6 +3782,12 @@ RefPtr<ShutdownPromise> MediaDecoderStateMachine::Shutdown() {
   PROFILER_MARKER_UNTYPED("MDSM::Shutdown", MEDIA_PLAYBACK);
   MOZ_ASSERT(OnTaskQueue());
   mShuttingDown = true;
+  if (!mStateObj) {
+    LOGW("Shutting down before state object initialization");
+    auto* s = new ShutdownState(this);
+    mStateObj.reset(s);
+    return s->Enter();
+  }
   return mStateObj->HandleShutdown();
 }
 
@@ -3925,6 +3933,9 @@ RefPtr<MediaDecoder::SeekPromise> MediaDecoderStateMachine::Seek(
 
 void MediaDecoderStateMachine::StopMediaSink() {
   MOZ_ASSERT(OnTaskQueue());
+  if (!mMediaSink) {
+    return;
+  }
   if (mMediaSink->IsStarted()) {
     LOG("Stop MediaSink");
     mMediaSink->Stop();
@@ -4105,6 +4116,10 @@ void MediaDecoderStateMachine::WaitForData(MediaData::Type aType) {
 
 nsresult MediaDecoderStateMachine::StartMediaSink() {
   MOZ_ASSERT(OnTaskQueue());
+
+  if (!mMediaSink) {
+    mMediaSink = CreateMediaSink();
+  }
 
   if (mMediaSink->IsStarted()) {
     return NS_OK;
@@ -4465,7 +4480,9 @@ void MediaDecoderStateMachine::UpdateOutputCaptured() {
     const bool wasPlaying = IsPlaying();
     // Stop and shut down the existing sink.
     StopMediaSink();
-    mMediaSink->Shutdown();
+    if (mMediaSink) {
+      mMediaSink->Shutdown();
+    }
 
     // Create a new sink according to whether output is captured.
     mMediaSink = CreateMediaSink();
@@ -4507,6 +4524,12 @@ RefPtr<GenericPromise> MediaDecoderStateMachine::SetSink(
     return GenericPromise::CreateAndResolve(true, __func__);
   }
 
+  if (!mMediaSink) {
+    // The canonical sink device is already mirrored and will be used when
+    // initialization creates the media sink.
+    return GenericPromise::CreateAndResolve(true, __func__);
+  }
+
   return mMediaSink->SetAudioDevice(std::move(aDevice));
 }
 
@@ -4529,6 +4552,9 @@ void MediaDecoderStateMachine::SuspendMediaSink() {
   }
   LOG("SuspendMediaSink");
   mIsMediaSinkSuspended = true;
+  if (!mMediaSink) {
+    return;
+  }
   StopMediaSink();
   mMediaSink->Shutdown();
 }
@@ -4552,7 +4578,10 @@ void MediaDecoderStateMachine::ResumeMediaSink() {
   }
   LOG("ResumeMediaSink");
   mIsMediaSinkSuspended = false;
-  if (!mMediaSink->IsStarted()) {
+  if (!mMediaSink || !mMediaSink->IsStarted()) {
+    if (mMediaSink) {
+      mMediaSink->Shutdown();
+    }
     mMediaSink = CreateMediaSink();
     MaybeStartPlayback();
   }
@@ -4767,8 +4796,12 @@ const char* MediaDecoderStateMachine::VideoRequestStatus() const {
 }
 
 void MediaDecoderStateMachine::OnSuspendTimerResolved() {
+  RefPtr<MediaDecoderStateMachine> self = this;
   LOG("OnSuspendTimerResolved");
   mVideoDecodeSuspendTimer.CompleteRequest();
+  if (!mStateObj) {
+    return;
+  }
   mStateObj->HandleVideoSuspendTimeout();
 }
 
