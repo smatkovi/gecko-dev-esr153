@@ -63,6 +63,42 @@ add_task(async function test_check_defaults_get_added() {
   }
 });
 
+add_task(async function test_disable_default_protocol_handlers() {
+  const pref = "gecko.handlerService.disableDefaultProtocolHandlers";
+  let handlerService = gHandlerService.wrappedJSObject;
+  let schemes = handlerService._store.data.schemes;
+
+  try {
+    Services.prefs.setBoolPref(pref, true);
+
+    schemes.mailto = {
+      stubEntry: true,
+      handlers: [null],
+    };
+    handlerService._injectDefaultProtocolHandlersIfNeeded();
+    Assert.ok(
+      !("mailto" in schemes),
+      "Previously injected stub handlers should be removed"
+    );
+
+    let userEntry = {
+      stubEntry: false,
+      handlers: [null],
+      alwaysAskBeforeHandling: false,
+    };
+    schemes.mailto = userEntry;
+    handlerService._injectDefaultProtocolHandlersIfNeeded();
+    Assert.strictEqual(
+      schemes.mailto,
+      userEntry,
+      "User-managed protocol handlers should be preserved"
+    );
+  } finally {
+    Services.prefs.clearUserPref(pref);
+    await deleteHandlerStore();
+  }
+});
+
 add_task(async function test_check_default_modification() {
   Assert.ok(
     true,
