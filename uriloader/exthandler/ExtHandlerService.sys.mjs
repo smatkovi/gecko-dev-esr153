@@ -97,6 +97,16 @@ HandlerService.prototype = {
    */
   _injectDefaultProtocolHandlersIfNeeded() {
     try {
+      if (
+        Services.prefs.getBoolPref(
+          "gecko.handlerService.disableDefaultProtocolHandlers",
+          false
+        )
+      ) {
+        this._removeDefaultProtocolHandlerStubs();
+        return;
+      }
+
       let defaultHandlersVersion = Services.prefs.getIntPref(
         "gecko.handlerService.defaultHandlersVersion",
         0
@@ -112,6 +122,20 @@ HandlerService.prototype = {
       }
     } catch (ex) {
       console.error(ex);
+    }
+  },
+
+  _removeDefaultProtocolHandlerStubs() {
+    let changed = false;
+    for (let scheme of Object.keys(lazy.kHandlerList.default.schemes)) {
+      let existingSchemeInfo = this._store.data.schemes[scheme];
+      if (existingSchemeInfo && existingSchemeInfo.stubEntry) {
+        delete this._store.data.schemes[scheme];
+        changed = true;
+      }
+    }
+    if (changed) {
+      this._store.saveSoon();
     }
   },
 
