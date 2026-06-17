@@ -53,6 +53,14 @@
 #ifdef MOZ_OMX
 #  include "OmxDecoderModule.h"
 #endif
+<<<<<<< HEAD
+=======
+#ifdef MOZ_ENABLE_WEBRTC_GECKOCAMERA
+#  include "gecko-camera/GeckoCameraDecoderModule.h"
+#endif
+#include "FFVPXRuntimeLinker.h"
+
+>>>>>>> 5f06748f9db5 (*mb2-prepare* Add a video decoder based on gecko-camera. JB#56755)
 #include <functional>
 
 #include "FFVPXRuntimeLinker.h"
@@ -105,6 +113,9 @@ class PDMInitializer final {
     }
 #endif
     FFVPXRuntimeLinker::Init();
+#ifdef MOZ_ENABLE_WEBRTC_GECKOCAMERA
+    GeckoCameraDecoderModule::Init();
+#endif
   }
 
   static void InitUtilityPDMs() {
@@ -161,7 +172,14 @@ class PDMInitializer final {
     }
 #endif  // !defined(MOZ_WIDGET_ANDROID)
 
+<<<<<<< HEAD
     RemoteMediaManagerChild::Init();
+=======
+#ifdef MOZ_ENABLE_WEBRTC_GECKOCAMERA
+    GeckoCameraDecoderModule::Init();
+#endif
+    RemoteDecoderManagerChild::Init();
+>>>>>>> 5f06748f9db5 (*mb2-prepare* Add a video decoder based on gecko-camera. JB#56755)
   }
 
   static void InitDefaultPDMs() {
@@ -177,6 +195,9 @@ class PDMInitializer final {
     FFVPXRuntimeLinker::Init();
 #ifdef MOZ_FFMPEG
     FFmpegRuntimeLinker::Init();
+#endif
+#ifdef MOZ_ENABLE_WEBRTC_GECKOCAMERA
+    GeckoCameraDecoderModule::Init();
 #endif
   }
 
@@ -582,6 +603,12 @@ void PDMFactory::CreateRddPDMs() {
         FFmpegRuntimeLinker::LinkStatusCode());
   }
 #endif
+#ifdef MOZ_ENABLE_WEBRTC_GECKOCAMERA
+  if (StaticPrefs::media_gecko_camera_codec_enabled()) {
+    StartupPDM(GeckoCameraDecoderModule::Create(),
+               StaticPrefs::media_gecko_camera_codec_preferred());
+  }
+#endif
   StartupPDM(AgnosticDecoderModule::Create(),
              StaticPrefs::media_prefer_non_ffvpx());
 
@@ -664,6 +691,14 @@ void PDMFactory::CreateContentPDMs() {
   if (StaticPrefs::media_wmf_media_engine_enabled()) {
     StartupPDM(RemoteDecoderModule::Create(
         RemoteMediaIn::UtilityProcess_MFMediaEngineCDM));
+  }
+#endif
+
+#ifdef MOZ_ENABLE_WEBRTC_GECKOCAMERA
+  if (StaticPrefs::media_gecko_camera_codec_enabled()) {
+    // Keep remote decoders first, but prefer gecko-camera over local software
+    // decoder modules when content-process fallback is used.
+    StartupPDM(GeckoCameraDecoderModule::Create());
   }
 #endif
 
@@ -759,6 +794,13 @@ void PDMFactory::CreateDefaultPDMs() {
   if (AndroidDecoderModule::IsJavaDecoderModuleAllowed()) {
     StartupPDM(AndroidDecoderModule::Create(),
                StaticPrefs::media_android_media_codec_preferred());
+  }
+#endif
+
+#ifdef MOZ_ENABLE_WEBRTC_GECKOCAMERA
+  if (StaticPrefs::media_gecko_camera_codec_enabled()) {
+    StartupPDM(GeckoCameraDecoderModule::Create(),
+               StaticPrefs::media_gecko_camera_codec_preferred());
   }
 #endif
 
