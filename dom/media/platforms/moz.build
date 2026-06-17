@@ -133,6 +133,17 @@ if CONFIG["MOZ_WIDGET_TOOLKIT"] == "android":
         "/media/libyuv/libyuv/include",
     ]
 
+if CONFIG["MOZ_ENABLE_WEBRTC_GECKOCAMERA"]:
+    EXPORTS += [
+        "gecko-camera/GeckoCameraDecoderModule.h",
+    ]
+    UNIFIED_SOURCES += [
+        "gecko-camera/GeckoCameraDecoderModule.cpp",
+        "gecko-camera/GeckoCameraVideoDecoder.cpp",
+    ]
+    OS_LIBS += CONFIG["LIBGECKOCAMERA_LIBS"]
+    CXXFLAGS += CONFIG["LIBGECKOCAMERA_CFLAGS"]
+
 FINAL_LIBRARY = "xul"
 
 # Add libFuzzer configuration directives
