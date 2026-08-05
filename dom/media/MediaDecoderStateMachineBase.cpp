@@ -96,7 +96,13 @@ nsresult MediaDecoderStateMachineBase::Init(MediaDecoder* aDecoder) {
   nsCOMPtr<nsIRunnable> r = NewRunnableMethod<RefPtr<MediaDecoder>>(
       "MediaDecoderStateMachineBase::InitializationTask", this,
       &MediaDecoderStateMachineBase::InitializationTask, aDecoder);
-  mTaskQueue->DispatchStateChange(r.forget());
+  AbstractThread* currentThread = AbstractThread::GetCurrent();
+  if (currentThread && currentThread->IsTailDispatcherAvailable()) {
+    mTaskQueue->DispatchStateChange(r.forget());
+  } else {
+    nsresult rv = mTaskQueue->Dispatch(r.forget());
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
 
   // Connect mirrors.
   aDecoder->CanonicalPlayState().ConnectMirror(&mPlayState);
