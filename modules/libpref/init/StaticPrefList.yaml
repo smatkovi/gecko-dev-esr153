@@ -5824,6 +5824,28 @@
 #endif
   mirror: always
 
+#ifdef MOZ_EMBEDLITE
+#---------------------------------------------------------------------------
+# Prefs starting with "embedlite."
+#---------------------------------------------------------------------------
+
+- name: embedlite.azpc.handle.viewport
+  type: bool
+  value: true
+  mirror: always
+
+- name: embedlite.azpc.handle.singletap
+  type: bool
+  value: true
+  mirror: always
+
+- name: embedlite.azpc.handle.longtap
+  type: bool
+  value: true
+  mirror: always
+
+#endif
+
 #---------------------------------------------------------------------------
 # Prefs starting with "extensions."
 #---------------------------------------------------------------------------

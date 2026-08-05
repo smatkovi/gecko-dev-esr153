@@ -44,6 +44,7 @@ pref_groups = [
     "docshell",
     "dom",
     "editor",
+    "embedlite",
     "extensions",
     "fission",
     "font",
