@@ -30,8 +30,11 @@
 #include "nsIPermissionManager.h"
 #include "nsIThread.h"
 #include "nsNetUtil.h"
+<<<<<<< HEAD
 #include "nsThreadUtils.h"
 #include "video_engine/desktop_capture_impl.h"
+=======
+>>>>>>> b27b8de994f1 (*mb2-prepare* Disable desktop sharing for EmbedLite)
 #include "video_engine/video_capture_factory.h"
 
 #if defined(_WIN32)
@@ -886,7 +889,18 @@ VideoEngine* CamerasParent::EnsureInitialized(CaptureEngine aEngine) {
     return nullptr;
   }
 
+<<<<<<< HEAD
   if (VideoEngine* engine = mEngines->ElementAt(aEngine); engine) {
+=======
+#ifdef MOZ_EMBEDLITE
+  if (capEngine != CameraEngine) {
+    LOG("Capture engine %d is not supported by EmbedLite", aEngine);
+    return nullptr;
+  }
+#endif
+
+  if (VideoEngine* engine = mEngines->ElementAt(capEngine); engine) {
+>>>>>>> b27b8de994f1 (*mb2-prepare* Disable desktop sharing for EmbedLite)
     return engine;
   }
 

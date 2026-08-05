@@ -11,6 +11,10 @@
 #include "fake_video_capture/video_capture_fake.h"
 #include "mozilla/StaticPrefs_media.h"
 
+#ifndef MOZ_EMBEDLITE
+#  include "desktop_capture_impl.h"
+#endif
+
 #if defined(WEBRTC_USE_PIPEWIRE)
 #  include "video_engine/placeholder_device_info.h"
 #endif
@@ -80,8 +84,7 @@ VideoCaptureFactory::CreateDeviceInfo(
     return deviceInfo;
   }
 
-#if defined(WEBRTC_ANDROID) || defined(WEBRTC_IOS)
-  MOZ_ASSERT("CreateDeviceInfo NO DESKTOP CAPTURE IMPL ON ANDROID" == nullptr);
+#if defined(WEBRTC_ANDROID) || defined(WEBRTC_IOS) || defined(MOZ_EMBEDLITE)
   return nullptr;
 #else
   return webrtc::DesktopCaptureImpl::CreateDeviceInfo(aType);
@@ -111,7 +114,7 @@ VideoCaptureFactory::CreateVideoCapture(
     return result;
   }
 
-#if defined(WEBRTC_ANDROID) || defined(WEBRTC_IOS)
+#if defined(WEBRTC_ANDROID) || defined(WEBRTC_IOS) || defined(MOZ_EMBEDLITE)
   MOZ_ASSERT("CreateVideoCapture NO DESKTOP CAPTURE IMPL ON ANDROID" ==
              nullptr);
 #else

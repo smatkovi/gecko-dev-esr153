@@ -5,7 +5,15 @@
 #include "VideoEngine.h"
 
 #include "libwebrtcglue/SystemTime.h"
+<<<<<<< HEAD
 #include "video_engine/desktop_capture_impl.h"
+=======
+#include "system_wrappers/include/clock.h"
+
+#ifndef MOZ_EMBEDLITE
+#  include "video_engine/desktop_capture_impl.h"
+#endif
+>>>>>>> b27b8de994f1 (*mb2-prepare* Disable desktop sharing for EmbedLite)
 
 #ifdef MOZ_WIDGET_ANDROID
 #  include "mozilla/jni/Utils.h"
@@ -126,6 +134,56 @@ already_AddRefed<VideoEngine> VideoEngine::Create(
       new VideoEngine(aCaptureDeviceType, std::move(aVideoCaptureFactory)));
 }
 
+<<<<<<< HEAD
+=======
+VideoEngine::CaptureEntry::CaptureEntry(
+    int32_t aCapnum, rtc::scoped_refptr<webrtc::VideoCaptureModule> aCapture,
+    webrtc::DesktopCaptureImpl* aDesktopImpl)
+    : mCapnum(aCapnum),
+      mVideoCaptureModule(std::move(aCapture)),
+      mDesktopImpl(aDesktopImpl) {}
+
+rtc::scoped_refptr<webrtc::VideoCaptureModule>
+VideoEngine::CaptureEntry::VideoCapture() {
+  return mVideoCaptureModule;
+}
+
+mozilla::MediaEventSource<void>*
+VideoEngine::CaptureEntry::CaptureEndedEvent() {
+  if (!mDesktopImpl) {
+    return nullptr;
+  }
+#if !defined(WEBRTC_ANDROID) && !defined(WEBRTC_IOS) && \
+    !defined(MOZ_EMBEDLITE)
+  return mDesktopImpl->CaptureEndedEvent();
+#else
+  return nullptr;
+#endif
+}
+
+int32_t VideoEngine::CaptureEntry::Capnum() const { return mCapnum; }
+
+bool VideoEngine::WithEntry(
+    const int32_t entryCapnum,
+    const std::function<void(CaptureEntry& entry)>&& fn) {
+#ifdef DEBUG
+  {
+    auto it = mIdMap.find(entryCapnum);
+    MOZ_ASSERT(it != mIdMap.end());
+    Unused << it;
+  }
+#endif
+
+  auto it = mCaps.find(mIdMap[entryCapnum]);
+  MOZ_ASSERT(it != mCaps.end());
+  if (it == mCaps.end()) {
+    return false;
+  }
+  fn(it->second);
+  return true;
+}
+
+>>>>>>> b27b8de994f1 (*mb2-prepare* Disable desktop sharing for EmbedLite)
 int32_t VideoEngine::GenerateId() {
   // XXX Something better than this (a map perhaps, or a simple boolean TArray,
   // given the number in-use is O(1) normally!)
