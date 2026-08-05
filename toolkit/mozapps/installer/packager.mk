@@ -159,7 +159,9 @@ ifdef MOZ_INCLUDE_SOURCE_INFO
 	@awk '$$2 == "MOZ_SOURCE_URL" {print $$3}' $(DEPTH)/source-repo.h >> $(MOZ_SOURCESTAMP_FILE)
 endif
 
-# The install target will install the application to prefix/lib/appname-version
+# The install target will install the application to prefix/lib/appname-version.
+# If INSTALL_SDK is set, it also installs the development headers and static
+# libraries into the versioned SDK directories.
 install:: prepare-package
 ifneq (,$(filter WINNT Darwin,$(OS_TARGET)))
 	$(error "make install" is not supported on this platform. Use "make package" instead.)
@@ -170,6 +172,23 @@ endif
 	$(NSINSTALL) -D $(DESTDIR)$(bindir)
 	$(RM) -f $(DESTDIR)$(bindir)/$(MOZ_APP_NAME)
 	ln -s $(installdir)/$(MOZ_APP_NAME) $(DESTDIR)$(bindir)
+
+ifdef INSTALL_SDK
+	$(NSINSTALL) -D $(DESTDIR)$(includedir)
+	(cd $(DIST)/include && $(TAR) $(TAR_CREATE_FLAGS) - .) | \
+	  (cd $(DESTDIR)$(includedir) && tar -xf -)
+	$(NSINSTALL) -D $(DESTDIR)$(sdkdir)/sdk/lib
+	if test -f $(DIST)/include/xpcom-config.h; then \
+	  $(SYSINSTALL) $(IFLAGS1) $(DIST)/include/xpcom-config.h $(DESTDIR)$(sdkdir); \
+	fi
+	(cd $(DIST)/sdk/lib && $(TAR) $(TAR_CREATE_FLAGS) - .) | \
+	  (cd $(DESTDIR)$(sdkdir)/sdk/lib && tar -xf -)
+	$(RM) -f $(DESTDIR)$(sdkdir)/lib $(DESTDIR)$(sdkdir)/include \
+	  $(DESTDIR)$(sdkdir)/idl
+	ln -s $(sdkdir)/sdk/lib $(DESTDIR)$(sdkdir)/lib
+	ln -s $(includedir) $(DESTDIR)$(sdkdir)/include
+	ln -s $(idldir) $(DESTDIR)$(sdkdir)/idl
+endif
 
 upload:
 	$(PYTHON3) -u $(MOZILLA_DIR)/build/upload.py --base-path $(DIST) $(UPLOAD_FILES)
