@@ -3169,6 +3169,8 @@ void HTMLMediaElement::UpdatePreloadAction() {
   // as we'll need it to play.
   if ((AllowedToPlay() && HasAttr(nsGkAtoms::autoplay)) || !mPaused) {
     nextAction = HTMLMediaElement::PRELOAD_ENOUGH;
+  } else if (HasAttr(kNameSpaceID_None, nsGkAtoms::autoplay)) {
+    nextAction = HTMLMediaElement::PRELOAD_METADATA;
   } else {
     // Find the appropriate preload action by looking at the attribute.
     const nsAttrValue* val =
@@ -5653,6 +5655,9 @@ void HTMLMediaElement::MetadataLoaded(const MediaInfo* aInfo,
   mTags = std::move(aTags);
   mLoadedDataFired = false;
   ChangeReadyState(HAVE_METADATA);
+  if (HasAttr(kNameSpaceID_None, nsGkAtoms::autoplay)) {
+    UpdatePreloadAction();
+  }
 
   // Add output tracks synchronously now to be sure they're available in
   // "loadedmetadata" event handlers.
