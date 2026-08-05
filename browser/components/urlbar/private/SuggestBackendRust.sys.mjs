@@ -623,11 +623,13 @@ export class SuggestBackendRust extends SuggestBackend {
     try {
       builder = lazy.SuggestStoreBuilder.init()
         .dataPath(this.#storeDataPath)
-        .remoteSettingsService(this.#remoteSettingsService)
-        .loadExtension(
+        .remoteSettingsService(this.#remoteSettingsService);
+      if (!AppConstants.MOZ_SYSTEM_SQLITE) {
+        builder = builder.loadExtension(
           AppConstants.SQLITE_LIBRARY_FILENAME,
           "sqlite3_fts5_init"
         );
+      }
     } catch (error) {
       this.logger.error("Error creating SuggestStoreBuilder", error);
       return null;

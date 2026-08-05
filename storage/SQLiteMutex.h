@@ -54,7 +54,7 @@ class SQLiteMutex : private BlockingResourceBase {
    */
   void lock() {
     MOZ_ASSERT(mMutex, "No mutex associated with this wrapper!");
-#if defined(DEBUG)
+#if defined(DEBUG) && !defined(MOZ_SYSTEM_SQLITE)
     // While SQLite Mutexes may be recursive, in our own code we do not want to
     // treat them as such.
     CheckAcquire();
@@ -62,7 +62,7 @@ class SQLiteMutex : private BlockingResourceBase {
 
     ::sqlite3_mutex_enter(mMutex);
 
-#if defined(DEBUG)
+#if defined(DEBUG) && !defined(MOZ_SYSTEM_SQLITE)
     Acquire();  // Call is protected by us holding the mutex.
 #endif
   }
@@ -72,7 +72,7 @@ class SQLiteMutex : private BlockingResourceBase {
    */
   void unlock() {
     MOZ_ASSERT(mMutex, "No mutex associated with this wrapper!");
-#if defined(DEBUG)
+#if defined(DEBUG) && !defined(MOZ_SYSTEM_SQLITE)
     // While SQLite Mutexes may be recursive, in our own code we do not want to
     // treat them as such.
     Release();  // Call is protected by us holding the mutex.

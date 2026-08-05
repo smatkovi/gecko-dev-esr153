@@ -14,14 +14,16 @@ add_setup(async function () {
 add_task(async function test_synchronous() {
   info("Testing synchronous connection");
   let conn = getOpenedUnsharedDatabase();
-  Assert.throws(
-    () =>
-      conn.executeSimpleSQL(
-        "CREATE VIRTUAL TABLE email USING fts5(sender, title, body);"
-      ),
-    /NS_ERROR_FAILURE/,
-    "Should not be able to use FTS5 without loading the extension"
-  );
+  if (!AppConstants.MOZ_SYSTEM_SQLITE) {
+    Assert.throws(
+      () =>
+        conn.executeSimpleSQL(
+          "CREATE VIRTUAL TABLE email USING fts5(sender, title, body);"
+        ),
+      /NS_ERROR_FAILURE/,
+      "Should not be able to use FTS5 without loading the extension"
+    );
+  }
 
   await loadFTS5Extension(conn);
 
@@ -59,14 +61,16 @@ add_task(async function test_asynchronous() {
   info("Testing asynchronous connection");
   let conn = await openAsyncDatabase(getTestDB());
 
-  await Assert.rejects(
-    executeSimpleSQLAsync(
-      conn,
-      "CREATE VIRTUAL TABLE email USING fts5(sender, title, body);"
-    ),
-    err => err.message.startsWith("no such module"),
-    "Should not be able to use FTS5 without loading the extension"
-  );
+  if (!AppConstants.MOZ_SYSTEM_SQLITE) {
+    await Assert.rejects(
+      executeSimpleSQLAsync(
+        conn,
+        "CREATE VIRTUAL TABLE email USING fts5(sender, title, body);"
+      ),
+      err => err.message.startsWith("no such module"),
+      "Should not be able to use FTS5 without loading the extension"
+    );
+  }
 
   await loadFTS5Extension(conn);
 
