@@ -110,6 +110,15 @@ static EGLDisplay GetAppDisplay() {
   return static_cast<EGLDisplay>(interface->nativeResourceForIntegration(
       QByteArrayLiteral("egldisplay")));
 }
+
+static bool IsHybrisDisplay(GLLibraryEGL& lib, const EGLDisplay display) {
+  const auto* const extensions = reinterpret_cast<const GLubyte*>(
+      lib.fQueryString(display, LOCAL_EGL_EXTENSIONS));
+  return GLContext::ListHasExtension(extensions,
+                                     "EGL_HYBRIS_native_buffer") ||
+         GLContext::ListHasExtension(extensions,
+                                     "EGL_HYBRIS_native_buffer2");
+}
 #endif
 
 static std::shared_ptr<EglDisplay> CreateDisplayForApp(
@@ -118,7 +127,20 @@ static std::shared_ptr<EglDisplay> CreateDisplayForApp(
 #ifdef MOZ_WIDGET_QT
   const auto display = GetAppDisplay();
   if (display != EGL_NO_DISPLAY) {
-    return lib.CreateBorrowedDisplay(display, out_failureId);
+    const bool isHybris = IsHybrisDisplay(lib, display);
+    if (const auto active = lib.GetActiveDisplay(display)) {
+      if (!isHybris &&
+          active->mOwnership != EglDisplay::Ownership::Borrowed) {
+        if (out_failureId) {
+          *out_failureId = "FEATURE_FAILURE_EGL_BORROWED_DISPLAY"_ns;
+        }
+        return nullptr;
+      }
+      return active;
+    }
+    if (!isHybris) {
+      return lib.CreateBorrowedDisplay(display, out_failureId);
+    }
   }
 #endif
   if (forceAccel) {
@@ -219,9 +241,9 @@ class GLContextEGLFactory {
  public:
   static already_AddRefed<GLContext> Create(EGLNativeWindowType aWindow,
                                             bool aHardwareWebRender);
-  static already_AddRefed<GLContext> CreateImpl(EGLNativeWindowType aWindow,
-                                                bool aHardwareWebRender,
-                                                bool aUseGles);
+  static already_AddRefed<GLContext> CreateImpl(
+      const std::shared_ptr<EglDisplay>& aEgl, EGLNativeWindowType aWindow,
+      bool aHardwareWebRender, bool aUseGles, nsACString* aFailureId);
 
  private:
   GLContextEGLFactory() = default;
@@ -229,47 +251,46 @@ class GLContextEGLFactory {
 };
 
 already_AddRefed<GLContext> GLContextEGLFactory::CreateImpl(
-    EGLNativeWindowType aWindow, bool aHardwareWebRender, bool aUseGles) {
-  nsCString failureId;
-  const auto lib = GLLibraryEGL::Get(&failureId);
-  if (!lib) {
-    gfxCriticalNote << "Failed[3] to load EGL library: " << failureId.get();
-    return nullptr;
-  }
-  const auto egl = CreateDisplayForApp(*lib, true, &failureId);
-  if (!egl) {
-    gfxCriticalNote << "Failed[3] to create EGL library  display: "
-                    << failureId.get();
-    return nullptr;
-  }
-
+    const std::shared_ptr<EglDisplay>& aEgl, EGLNativeWindowType aWindow,
+    bool aHardwareWebRender, bool aUseGles,
+    nsACString* const aFailureId) {
   bool doubleBuffered = true;
   const bool useGles3 = aHardwareWebRender && aUseGles;
 #ifdef MOZ_WIDGET_QT
   // Qt's Wayland EGL integration uses an alpha-capable window config even
-  // when the logical screen depth does not include alpha.
-  const bool useAlphaConfig = true;
+  // when the logical screen depth does not include alpha. Gecko-owned displays
+  // retain the legacy config selection used by hybris.
+  const bool useAlphaConfig =
+      aEgl->mOwnership == EglDisplay::Ownership::Borrowed;
 #else
   const bool useAlphaConfig = kIsLinux;
 #endif
 
   EGLConfig config;
-  if (aHardwareWebRender && egl->mLib->IsANGLE()) {
+  if (aHardwareWebRender && aEgl->mLib->IsANGLE()) {
     // Force enable alpha channel to make sure ANGLE use correct framebuffer
     // formart
     const int bpp = 32;
-    if (!CreateConfig(*egl, &config, bpp, false, aUseGles, useGles3)) {
+    if (!CreateConfig(*aEgl, &config, bpp, false, aUseGles, useGles3)) {
+      if (aFailureId &&
+          aEgl->mOwnership == EglDisplay::Ownership::Borrowed) {
+        *aFailureId = "FEATURE_FAILURE_EGL_BORROWED_CONFIG"_ns;
+      }
       gfxCriticalNote << "Failed to create EGLConfig for WebRender ANGLE!";
       return nullptr;
     }
   } else if (useAlphaConfig) {
     const int bpp = 32;
-    if (!CreateConfig(*egl, &config, bpp, false, aUseGles, useGles3)) {
+    if (!CreateConfig(*aEgl, &config, bpp, false, aUseGles, useGles3)) {
+      if (aFailureId &&
+          aEgl->mOwnership == EglDisplay::Ownership::Borrowed) {
+        *aFailureId = "FEATURE_FAILURE_EGL_BORROWED_CONFIG"_ns;
+      }
       gfxCriticalNote << "Failed to create EGLConfig for WebRender!";
       return nullptr;
     }
   } else {
-    if (!CreateConfigScreen(*egl, &config,
+    if (!CreateConfigScreen(*aEgl, &config,
                             /* aEnableDepthBuffer */ false, aUseGles,
                             useGles3)) {
       gfxCriticalNote << "Failed to create EGLConfig!";
@@ -279,8 +300,13 @@ already_AddRefed<GLContext> GLContextEGLFactory::CreateImpl(
 
   EGLSurface surface = EGL_NO_SURFACE;
   if (aWindow) {
-    surface = mozilla::gl::CreateSurfaceFromNativeWindow(*egl, aWindow, config);
+    surface =
+        mozilla::gl::CreateSurfaceFromNativeWindow(*aEgl, aWindow, config);
     if (!surface) {
+      if (aFailureId &&
+          aEgl->mOwnership == EglDisplay::Ownership::Borrowed) {
+        *aFailureId = "FEATURE_FAILURE_EGL_BORROWED_SURFACE"_ns;
+      }
       return nullptr;
     }
   }
@@ -299,33 +325,50 @@ already_AddRefed<GLContext> GLContextEGLFactory::CreateImpl(
 
   const auto desc = GLContextDesc{{flags}, false};
   RefPtr<GLContextEGL> gl = GLContextEGL::CreateGLContext(
-      egl, desc, config, surface, aUseGles, config, &failureId);
+      aEgl, desc, config, surface, aUseGles, config, aFailureId);
   if (!gl) {
-    const auto err = egl->mLib->fGetError();
+    if (aFailureId &&
+        aEgl->mOwnership == EglDisplay::Ownership::Borrowed) {
+      *aFailureId = "FEATURE_FAILURE_EGL_BORROWED_CONTEXT"_ns;
+    }
+    const auto err = aEgl->mLib->fGetError();
     gfxCriticalNote << "Failed to create EGLContext!: " << gfx::hexa(err);
-    GLContextEGL::DestroySurface(*egl, surface);
+    GLContextEGL::DestroySurface(*aEgl, surface);
     return nullptr;
   }
 
-  gl->MakeCurrent();
+  if (!gl->MakeCurrent()) {
+    if (aFailureId &&
+        aEgl->mOwnership == EglDisplay::Ownership::Borrowed) {
+      *aFailureId = "FEATURE_FAILURE_EGL_BORROWED_CONTEXT"_ns;
+    }
+    return nullptr;
+  }
   gl->SetIsDoubleBuffered(doubleBuffered);
 
 #ifdef MOZ_WIDGET_GTK
   if (surface) {
     const int interval = gfxVars::SwapIntervalEGL() ? 1 : 0;
-    egl->fSwapInterval(interval);
+    aEgl->fSwapInterval(interval);
   }
 #endif
-  if (aHardwareWebRender && egl->mLib->IsANGLE()) {
+  if (aHardwareWebRender && aEgl->mLib->IsANGLE()) {
     MOZ_ASSERT(doubleBuffered);
     const int interval = gfxVars::SwapIntervalEGL() ? 1 : 0;
-    egl->fSwapInterval(interval);
+    aEgl->fSwapInterval(interval);
   }
   return gl.forget();
 }
 
 already_AddRefed<GLContext> GLContextEGLFactory::Create(
     EGLNativeWindowType aWindow, bool aHardwareWebRender) {
+  nsCString failureId;
+  const auto lib = GLLibraryEGL::Get(&failureId);
+  if (!lib) {
+    gfxCriticalNote << "Failed[3] to load EGL library: " << failureId.get();
+    return nullptr;
+  }
+
   bool preferGles;
 #if defined(MOZ_WIDGET_ANDROID)
   preferGles = true;
@@ -333,14 +376,114 @@ already_AddRefed<GLContext> GLContextEGLFactory::Create(
   preferGles = StaticPrefs::gfx_egl_prefer_gles_enabled_AtStartup();
 #endif  // defined(MOZ_WIDGET_ANDROID)
 
-  RefPtr<GLContext> glContext =
-      CreateImpl(aWindow, aHardwareWebRender, preferGles);
+  const auto createForDisplay =
+      [&](const std::shared_ptr<EglDisplay>& egl) -> RefPtr<GLContext> {
+    RefPtr<GLContext> glContext =
+        CreateImpl(egl, aWindow, aHardwareWebRender, preferGles, &failureId);
 #if !defined(MOZ_WIDGET_ANDROID)
-  if (!glContext) {
-    glContext = CreateImpl(aWindow, aHardwareWebRender, !preferGles);
-  }
+    if (!glContext) {
+      glContext = CreateImpl(egl, aWindow, aHardwareWebRender, !preferGles,
+                             &failureId);
+    }
 #endif  // !defined(MOZ_WIDGET_ANDROID)
-  return glContext.forget();
+    return glContext;
+  };
+
+#ifdef MOZ_WIDGET_QT
+  const EGLDisplay appDisplay = GetAppDisplay();
+  if (appDisplay != EGL_NO_DISPLAY) {
+    const bool isHybris = IsHybrisDisplay(*lib, appDisplay);
+    if (const auto active = lib->GetActiveDisplay(appDisplay)) {
+      if (!isHybris &&
+          active->mOwnership != EglDisplay::Ownership::Borrowed) {
+        failureId = "FEATURE_FAILURE_EGL_BORROWED_DISPLAY"_ns;
+        return nullptr;
+      }
+      if (isHybris &&
+          active->mOwnership == EglDisplay::Ownership::Borrowed && !aWindow &&
+          aHardwareWebRender) {
+        CreateContextFlags flags = CreateContextFlags::PREFER_ES3;
+        if (StaticPrefs::gfx_webrender_prefer_robustness_AtStartup()) {
+          flags |= CreateContextFlags::PREFER_ROBUSTNESS;
+        }
+        RefPtr<GLContextEGL> gl =
+            GLContextEGL::CreateWithoutSurfaceForApi(
+                active, {flags}, /* useGles */ true, &failureId);
+        const bool madeCurrent = gl && gl->MakeCurrent();
+        if (madeCurrent && gl->IsGLES() && gl->Version() >= 300) {
+          return gl.forget();
+        }
+        if (gl) {
+          failureId = "FEATURE_FAILURE_EGL_BORROWED_CONTEXT"_ns;
+          if (madeCurrent &&
+              !active->fMakeCurrent(EGL_NO_SURFACE, EGL_NO_SURFACE,
+                                    EGL_NO_CONTEXT)) {
+            // Intentionally retain the context and borrowed wrapper so a later
+            // owned wrapper cannot collide with the still-current display.
+            (void)gl.forget().take();
+            return nullptr;
+          }
+        }
+        // An active borrowed wrapper is owned by another caller, so it cannot
+        // be discarded here without colliding with an owned wrapper.
+        return nullptr;
+      }
+      return createForDisplay(active).forget();
+    }
+
+    if (!isHybris) {
+      const auto borrowed =
+          lib->CreateBorrowedDisplay(appDisplay, &failureId);
+      if (!borrowed) {
+        return nullptr;
+      }
+      return createForDisplay(borrowed).forget();
+    }
+
+    if (!aWindow && aHardwareWebRender) {
+      auto borrowed = lib->CreateBorrowedDisplay(appDisplay, &failureId);
+      if (borrowed) {
+        CreateContextFlags flags = CreateContextFlags::PREFER_ES3;
+        if (StaticPrefs::gfx_webrender_prefer_robustness_AtStartup()) {
+          flags |= CreateContextFlags::PREFER_ROBUSTNESS;
+        }
+        RefPtr<GLContextEGL> gl =
+            GLContextEGL::CreateWithoutSurfaceForApi(
+                borrowed, {flags}, /* useGles */ true, &failureId);
+        const bool madeCurrent = gl && gl->MakeCurrent();
+        if (madeCurrent && gl->IsGLES() && gl->Version() >= 300) {
+          return gl.forget();
+        }
+        if (gl) {
+          failureId = "FEATURE_FAILURE_EGL_BORROWED_CONTEXT"_ns;
+          if (madeCurrent &&
+              !borrowed->fMakeCurrent(EGL_NO_SURFACE, EGL_NO_SURFACE,
+                                      EGL_NO_CONTEXT)) {
+            // Intentionally retain the context and borrowed wrapper so a later
+            // owned wrapper cannot collide with the still-current display.
+            (void)gl.forget().take();
+            return nullptr;
+          }
+        }
+        gl = nullptr;
+        borrowed.reset();
+      }
+      gfxCriticalNote
+          << "Qt borrowed EGL display cannot provide a GLES 3 WebRender "
+             "context; using Gecko's display: "
+          << failureId.get();
+    }
+  }
+#endif
+
+  failureId.Truncate();
+  const auto egl = lib->CreateDisplay(true, false, &failureId);
+  if (!egl) {
+    gfxCriticalNote << "Failed[3] to create EGL library display: "
+                    << failureId.get();
+    return nullptr;
+  }
+  return createForDisplay(egl).forget();
 }
 
 /* static */
@@ -928,10 +1071,23 @@ bool CreateConfig(EglDisplay& aEgl, EGLConfig* aConfig, int32_t aDepth,
   }
 
   MOZ_ASSERT_IF(aUseGles3, aUseGles);
-  attribs.push_back(LOCAL_EGL_RENDERABLE_TYPE);
-  attribs.push_back(aUseGles ? (aUseGles3 ? LOCAL_EGL_OPENGL_ES3_BIT_KHR
-                                          : LOCAL_EGL_OPENGL_ES2_BIT)
-                             : LOCAL_EGL_OPENGL_BIT);
+#ifdef MOZ_WIDGET_QT
+  const bool useLegacyConfig =
+      aEgl.mOwnership == EglDisplay::Ownership::Owned;
+#else
+  const bool useLegacyConfig = false;
+#endif
+  if (useLegacyConfig) {
+    if (aUseGles) {
+      attribs.push_back(LOCAL_EGL_RENDERABLE_TYPE);
+      attribs.push_back(LOCAL_EGL_OPENGL_ES2_BIT);
+    }
+  } else {
+    attribs.push_back(LOCAL_EGL_RENDERABLE_TYPE);
+    attribs.push_back(aUseGles ? (aUseGles3 ? LOCAL_EGL_OPENGL_ES3_BIT_KHR
+                                            : LOCAL_EGL_OPENGL_ES2_BIT)
+                               : LOCAL_EGL_OPENGL_BIT);
+  }
   for (const auto& cur : kTerminationAttribs) {
     attribs.push_back(cur);
   }
@@ -1008,17 +1164,11 @@ bool QtEGLDisplayRequiresSoftwareWebRender() {
   if (!lib) {
     return false;
   }
-  const auto egl = lib->CreateBorrowedDisplay(display, &failureId);
-  if (!egl) {
+  if (IsHybrisDisplay(*lib, display)) {
     return false;
   }
-
-  const auto* extensions = reinterpret_cast<const GLubyte*>(
-      egl->mLib->fQueryString(egl->mDisplay, LOCAL_EGL_EXTENSIONS));
-  if (GLContext::ListHasExtension(extensions,
-                                  "EGL_HYBRIS_native_buffer") ||
-      GLContext::ListHasExtension(extensions,
-                                  "EGL_HYBRIS_native_buffer2")) {
+  const auto egl = lib->CreateBorrowedDisplay(display, &failureId);
+  if (!egl) {
     return false;
   }
 
@@ -1192,92 +1342,112 @@ bool GLContextEGL::FindVisual(int* const out_visualId) {
 #endif
 
 /*static*/
+RefPtr<GLContextEGL> GLContextEGL::CreateWithoutSurfaceForApi(
+    const std::shared_ptr<EglDisplay> egl, const GLContextCreateDesc& desc,
+    const bool useGles, nsACString* const out_failureId) {
+  const bool isBorrowed =
+      egl->mOwnership == EglDisplay::Ownership::Borrowed;
+#ifdef MOZ_WIDGET_GTK
+  // First try creating a context with no config and no surface, this is what
+  // we really want, and seems to be the only way to make selecting software
+  // Mesa init properly when it's not the first device.
+  if (egl->IsExtensionSupported(EGLExtension::KHR_no_config_context) &&
+      egl->IsExtensionSupported(EGLExtension::KHR_surfaceless_context)) {
+    // These extensions have been supported by mesa and nvidia drivers
+    // since 2014 or earlier, this is the preferred code path
+    auto fullDesc = GLContextDesc{desc};
+    fullDesc.isOffscreen = true;
+    RefPtr<GLContextEGL> gl = GLContextEGL::CreateGLContext(
+        egl, fullDesc, EGL_NO_CONFIG, EGL_NO_SURFACE, useGles, EGL_NO_CONFIG,
+        out_failureId);
+    if (gl) {
+      return gl;
+    }
+    if (isBorrowed) {
+      *out_failureId = "FEATURE_FAILURE_EGL_BORROWED_CONTEXT"_ns;
+    }
+    NS_WARNING(
+        "Failed to create GLContext with no config and no surface, will try "
+        "ChooseConfig");
+  }
+#endif
+
+  const EGLConfig surfaceConfig = ChooseConfig(*egl, desc, useGles);
+  if (surfaceConfig == EGL_NO_CONFIG) {
+    if (isBorrowed) {
+      *out_failureId = "FEATURE_FAILURE_EGL_BORROWED_CONFIG"_ns;
+    } else {
+      *out_failureId = "FEATURE_FAILURE_EGL_NO_CONFIG"_ns;
+    }
+    NS_WARNING("Failed to find a compatible config.");
+    return nullptr;
+  }
+
+  if (GLContext::ShouldSpew()) {
+    egl->DumpEGLConfig(surfaceConfig);
+  }
+  const EGLConfig contextConfig =
+      egl->IsExtensionSupported(EGLExtension::KHR_no_config_context)
+          ? nullptr
+          : surfaceConfig;
+
+  auto dummySize = mozilla::gfx::IntSize{16, 16};
+  EGLSurface surface = nullptr;
+#ifdef MOZ_WAYLAND
+  if (GdkIsWaylandDisplay()) {
+    surface = GLContextEGL::CreateWaylandOffscreenSurface(*egl, surfaceConfig,
+                                                          dummySize);
+  } else
+#endif
+  {
+    surface = GLContextEGL::CreatePBufferSurfaceTryingPowerOfTwo(
+        *egl, surfaceConfig, LOCAL_EGL_NONE, dummySize);
+  }
+  if (!surface) {
+    if (isBorrowed) {
+      *out_failureId = "FEATURE_FAILURE_EGL_BORROWED_SURFACE"_ns;
+    } else {
+      *out_failureId = "FEATURE_FAILURE_EGL_POT"_ns;
+    }
+    NS_WARNING("Failed to create PBuffer for context!");
+    return nullptr;
+  }
+
+  auto fullDesc = GLContextDesc{desc};
+  fullDesc.isOffscreen = true;
+  RefPtr<GLContextEGL> gl = GLContextEGL::CreateGLContext(
+      egl, fullDesc, surfaceConfig, surface, useGles, contextConfig,
+      out_failureId);
+  if (!gl) {
+    if (isBorrowed) {
+      *out_failureId = "FEATURE_FAILURE_EGL_BORROWED_CONTEXT"_ns;
+    }
+    NS_WARNING("Failed to create GLContext from PBuffer");
+    egl->fDestroySurface(surface);
+#if defined(MOZ_WAYLAND)
+    DeleteWaylandOffscreenGLSurface(surface);
+#endif
+    return nullptr;
+  }
+
+  return gl;
+}
+
+/*static*/
 RefPtr<GLContextEGL> GLContextEGL::CreateWithoutSurface(
     const std::shared_ptr<EglDisplay> egl, const GLContextCreateDesc& desc,
     nsACString* const out_failureId) {
-  const auto WithUseGles = [&](const bool useGles) -> RefPtr<GLContextEGL> {
-#ifdef MOZ_WIDGET_GTK
-    // First try creating a context with no config and no surface, this is what
-    // we really want, and seems to be the only way to make selecting software
-    // Mesa init properly when it's not the first device.
-    if (egl->IsExtensionSupported(EGLExtension::KHR_no_config_context) &&
-        egl->IsExtensionSupported(EGLExtension::KHR_surfaceless_context)) {
-      // These extensions have been supported by mesa and nvidia drivers
-      // since 2014 or earlier, this is the preferred code path
-      auto fullDesc = GLContextDesc{desc};
-      fullDesc.isOffscreen = true;
-      RefPtr<GLContextEGL> gl = GLContextEGL::CreateGLContext(
-          egl, fullDesc, EGL_NO_CONFIG, EGL_NO_SURFACE, useGles, EGL_NO_CONFIG,
-          out_failureId);
-      if (gl) {
-        return gl;
-      }
-      NS_WARNING(
-          "Failed to create GLContext with no config and no surface, will try "
-          "ChooseConfig");
-    }
-#endif
-
-    const EGLConfig surfaceConfig = ChooseConfig(*egl, desc, useGles);
-    if (surfaceConfig == EGL_NO_CONFIG) {
-      *out_failureId = "FEATURE_FAILURE_EGL_NO_CONFIG"_ns;
-      NS_WARNING("Failed to find a compatible config.");
-      return nullptr;
-    }
-
-    if (GLContext::ShouldSpew()) {
-      egl->DumpEGLConfig(surfaceConfig);
-    }
-    const EGLConfig contextConfig =
-        egl->IsExtensionSupported(EGLExtension::KHR_no_config_context)
-            ? nullptr
-            : surfaceConfig;
-
-    auto dummySize = mozilla::gfx::IntSize{16, 16};
-    EGLSurface surface = nullptr;
-#ifdef MOZ_WAYLAND
-    if (GdkIsWaylandDisplay()) {
-      surface = GLContextEGL::CreateWaylandOffscreenSurface(*egl, surfaceConfig,
-                                                            dummySize);
-    } else
-#endif
-    {
-      surface = GLContextEGL::CreatePBufferSurfaceTryingPowerOfTwo(
-          *egl, surfaceConfig, LOCAL_EGL_NONE, dummySize);
-    }
-    if (!surface) {
-      *out_failureId = "FEATURE_FAILURE_EGL_POT"_ns;
-      NS_WARNING("Failed to create PBuffer for context!");
-      return nullptr;
-    }
-
-    auto fullDesc = GLContextDesc{desc};
-    fullDesc.isOffscreen = true;
-    RefPtr<GLContextEGL> gl =
-        GLContextEGL::CreateGLContext(egl, fullDesc, surfaceConfig, surface,
-                                      useGles, contextConfig, out_failureId);
-    if (!gl) {
-      NS_WARNING("Failed to create GLContext from PBuffer");
-      egl->fDestroySurface(surface);
-#if defined(MOZ_WAYLAND)
-      DeleteWaylandOffscreenGLSurface(surface);
-#endif
-      return nullptr;
-    }
-
-    return gl;
-  };
-
   bool preferGles;
 #if defined(MOZ_WIDGET_ANDROID)
   preferGles = true;
 #else
   preferGles = StaticPrefs::gfx_egl_prefer_gles_enabled_AtStartup();
 #endif  // defined(MOZ_WIDGET_ANDROID)
-  RefPtr<GLContextEGL> gl = WithUseGles(preferGles);
+  RefPtr<GLContextEGL> gl =
+      CreateWithoutSurfaceForApi(egl, desc, preferGles, out_failureId);
 #if !defined(MOZ_WIDGET_ANDROID)
   if (!gl) {
-    gl = WithUseGles(!preferGles);
+    gl = CreateWithoutSurfaceForApi(egl, desc, !preferGles, out_failureId);
   }
 #endif  // !defined(MOZ_WIDGET_ANDROID)
   return gl;
@@ -1303,23 +1473,102 @@ void GLContextEGL::DestroySurface(EglDisplay& aEgl, const EGLSurface aSurface) {
 /*static*/
 already_AddRefed<GLContext> GLContextProviderEGL::CreateHeadless(
     const GLContextCreateDesc& desc, nsACString* const out_failureId) {
-  bool useSoftwareDisplay =
-      static_cast<bool>(desc.flags & CreateContextFlags::FORBID_HARDWARE);
-  std::shared_ptr<EglDisplay> display;
-  if (useSoftwareDisplay) {
-    display = CreateSoftwareEglDisplay(out_failureId);
-  } else {
-    const auto lib = GLLibraryEGL::Get(out_failureId);
-    if (!lib) {
+  if (bool(desc.flags & CreateContextFlags::FORBID_HARDWARE)) {
+    const auto display = CreateSoftwareEglDisplay(out_failureId);
+    if (!display) {
       return nullptr;
     }
-    display = CreateDisplayForApp(*lib, false, out_failureId);
+    auto gl =
+        GLContextEGL::CreateWithoutSurface(display, desc, out_failureId);
+    return gl.forget();
   }
+
+  const auto lib = GLLibraryEGL::Get(out_failureId);
+  if (!lib) {
+    return nullptr;
+  }
+
+#ifdef MOZ_WIDGET_QT
+  const EGLDisplay appDisplay = GetAppDisplay();
+  if (appDisplay != EGL_NO_DISPLAY) {
+    const bool isHybris = IsHybrisDisplay(*lib, appDisplay);
+    const bool requireGles3 =
+        bool(desc.flags & CreateContextFlags::PREFER_ES3);
+    auto display = lib->GetActiveDisplay(appDisplay);
+
+    if (display) {
+      if (!isHybris &&
+          display->mOwnership != EglDisplay::Ownership::Borrowed) {
+        *out_failureId = "FEATURE_FAILURE_EGL_BORROWED_DISPLAY"_ns;
+        return nullptr;
+      }
+      if (isHybris &&
+          display->mOwnership == EglDisplay::Ownership::Borrowed &&
+          requireGles3) {
+        // In the WebRender compositor flow, the active borrowed display
+        // already backs RenderThread's SingletonGL. WebRender creates its
+        // shared shaders on that context, so a second, unshared EGL context
+        // cannot consume them. Let the compositor reuse SingletonGL instead.
+        out_failureId->Truncate();
+        return nullptr;
+      }
+
+      auto gl =
+          GLContextEGL::CreateWithoutSurface(display, desc, out_failureId);
+      return gl.forget();
+    }
+
+    if (!isHybris) {
+      display = lib->CreateBorrowedDisplay(appDisplay, out_failureId);
+      if (!display) {
+        return nullptr;
+      }
+      auto gl =
+          GLContextEGL::CreateWithoutSurface(display, desc, out_failureId);
+      return gl.forget();
+    }
+
+    if (requireGles3) {
+      nsCString borrowedFailureId;
+      auto borrowed =
+          lib->CreateBorrowedDisplay(appDisplay, &borrowedFailureId);
+      if (borrowed) {
+        RefPtr<GLContextEGL> gl =
+            GLContextEGL::CreateWithoutSurfaceForApi(
+                borrowed, desc, /* useGles */ true, &borrowedFailureId);
+        const bool madeCurrent = gl && gl->MakeCurrent();
+        if (madeCurrent && gl->IsGLES() && gl->Version() >= 300) {
+          return gl.forget();
+        }
+        if (gl) {
+          borrowedFailureId = "FEATURE_FAILURE_EGL_BORROWED_CONTEXT"_ns;
+          if (madeCurrent &&
+              !borrowed->fMakeCurrent(EGL_NO_SURFACE, EGL_NO_SURFACE,
+                                      EGL_NO_CONTEXT)) {
+            // Intentionally retain the context and borrowed wrapper so a later
+            // owned wrapper cannot collide with the still-current display.
+            *out_failureId = borrowedFailureId;
+            (void)gl.forget().take();
+            return nullptr;
+          }
+        }
+        gl = nullptr;
+        borrowed.reset();
+      }
+      gfxCriticalNote
+          << "Qt borrowed EGL display cannot provide a GLES 3 headless "
+             "context; using Gecko's display: "
+          << borrowedFailureId.get();
+    }
+  }
+#endif
+
+  const auto display = CreateDisplayForApp(*lib, false, out_failureId);
   if (!display) {
     return nullptr;
   }
-  auto ret = GLContextEGL::CreateWithoutSurface(display, desc, out_failureId);
-  return ret.forget();
+  auto gl = GLContextEGL::CreateWithoutSurface(display, desc, out_failureId);
+  return gl.forget();
 }
 
 // Don't want a global context on Android as 1) share groups across 2 threads

@@ -34,12 +34,12 @@ UniquePtr<RenderCompositor> RenderCompositorOGL::Create(
     nsCString failureId;
     gl = gl::GLContextProvider::CreateHeadless(
         {gl::CreateContextFlags::PREFER_ES3}, &failureId);
-    if (!gl) {
+    if (!gl && !failureId.IsEmpty()) {
       aError.Assign(failureId);
       return nullptr;
     }
   }
-  if (!useEmbedLiteOffscreen) {
+  if (!gl) {
     gl = RenderThread::Get()->SingletonGL();
   }
 #else

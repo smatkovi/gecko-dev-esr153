@@ -162,6 +162,7 @@ class GLLibraryEGL final {
                                             nsACString* const out_failureId);
   std::shared_ptr<EglDisplay> CreateBorrowedDisplay(
       EGLDisplay display, nsACString* const out_failureId);
+  std::shared_ptr<EglDisplay> GetActiveDisplay(EGLDisplay display);
   std::shared_ptr<EglDisplay> CreateDisplay(ID3D11Device*);
   std::shared_ptr<EglDisplay> DefaultDisplay(nsACString* const out_failureId);
 

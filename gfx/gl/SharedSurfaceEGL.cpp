@@ -25,9 +25,15 @@ namespace gl {
 
 static bool HasEglImageExtensions(const GLContextEGL& gl) {
   const auto& egl = *(gl.mEgl);
+#ifdef MOZ_WIDGET_QT
+  const bool allowDesktopGL =
+      egl.mOwnership == EglDisplay::Ownership::Borrowed;
+#else
+  const bool allowDesktopGL = true;
+#endif
   return egl.HasKHRImageBase() &&
          egl.IsExtensionSupported(EGLExtension::KHR_gl_texture_2D_image) &&
-         (!gl.IsGLES() ||
+         ((allowDesktopGL && !gl.IsGLES()) ||
           gl.IsExtensionSupported(GLContext::OES_EGL_image_external) ||
           gl.IsExtensionSupported(GLContext::OES_EGL_image));
 }

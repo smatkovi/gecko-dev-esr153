@@ -932,6 +932,16 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::CreateBorrowedDisplay(
   return ret;
 }
 
+std::shared_ptr<EglDisplay> GLLibraryEGL::GetActiveDisplay(
+    const EGLDisplay display) {
+  StaticMutexAutoLock lock(sMutex);
+  const auto itr = mActiveDisplays.find(display);
+  if (itr == mActiveDisplays.end()) {
+    return nullptr;
+  }
+  return itr->second.lock();
+}
+
 std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplayLocked(
     const bool forceAccel, const bool forceSoftware,
     nsACString* const out_failureId, const StaticMutexAutoLock& aProofOfLock) {

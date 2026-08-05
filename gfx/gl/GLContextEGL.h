@@ -112,7 +112,7 @@ class GLContextEGL final : public GLContext {
 
   static RefPtr<GLContextEGL> CreateWithoutSurface(
       std::shared_ptr<EglDisplay>, const GLContextCreateDesc&,
-      nsACString* const out_FailureId);
+      nsACString* const out_failureId);
   static RefPtr<GLContextEGL> CreateEGLSurfacelessContext(
       const std::shared_ptr<EglDisplay> display,
       const GLContextCreateDesc& desc, nsACString* const out_failureId);
@@ -129,6 +129,10 @@ class GLContextEGL final : public GLContext {
  protected:
   friend class GLContextProviderEGL;
   friend class GLContextEGLFactory;
+
+  static RefPtr<GLContextEGL> CreateWithoutSurfaceForApi(
+      std::shared_ptr<EglDisplay>, const GLContextCreateDesc&, bool useGles,
+      nsACString* const out_failureId);
 
   virtual void OnMarkDestroyed() override;
 

@@ -53,12 +53,9 @@ UniquePtr<RenderCompositor> RenderCompositorEGL::Create(
     nsCString failureId;
     gl = gl::GLContextProvider::CreateHeadless(
         {gl::CreateContextFlags::PREFER_ES3}, &failureId);
-    if (!gl && aError.IsEmpty()) {
-      aError.Assign(failureId);
-    }
-    if (!gl) {
+    if (!gl && !failureId.IsEmpty()) {
       if (aError.IsEmpty()) {
-        aError.Assign("RcEGL(no EmbedLite headless GL)"_ns);
+        aError.Assign(failureId);
       }
       return nullptr;
     }
