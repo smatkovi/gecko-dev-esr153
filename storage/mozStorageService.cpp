@@ -5,6 +5,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "BaseVFS.h"
+#include "mozilla/Assertions.h"
 #include "mozilla/Attributes.h"
 #include "mozilla/DebugOnly.h"
 #include "mozilla/SpinEventLoopUntil.h"
@@ -44,7 +45,7 @@ namespace mozilla::storage {
 ////////////////////////////////////////////////////////////////////////////////
 //// Memory Reporting
 
-#ifdef MOZ_DMD
+#if defined(MOZ_DMD) && !defined(MOZ_SYSTEM_SQLITE)
 mozilla::Atomic<size_t> gSqliteMemoryUsed;
 #endif
 
@@ -141,7 +142,7 @@ Service::CollectReports(nsIHandleReportCallback* aHandleReport,
                  SQLITE_DBSTATUS_SCHEMA_USED, &totalConnSize);
     }
 
-#ifdef MOZ_DMD
+#if defined(MOZ_DMD) && !defined(MOZ_SYSTEM_SQLITE)
     if (::sqlite3_memory_used() != int64_t(gSqliteMemoryUsed)) {
       NS_WARNING(
           "memory consumption reported by SQLite doesn't match "
@@ -320,6 +321,18 @@ nsresult Service::initialize() {
   if (rc != SQLITE_OK) {
     return convertResultCode(rc);
   }
+
+#ifdef MOZ_SYSTEM_SQLITE
+  constexpr int kMinimumSQLiteVersion = 3049002;
+  MOZ_RELEASE_ASSERT(
+      ::sqlite3_libversion_number() >= kMinimumSQLiteVersion &&
+          ::sqlite3_compileoption_used("THREADSAFE=1") &&
+          ::sqlite3_compileoption_used("SECURE_DELETE") &&
+          ::sqlite3_compileoption_used("ENABLE_UNLOCK_NOTIFY") &&
+          ::sqlite3_compileoption_used("ENABLE_DBSTAT_VTAB") &&
+          ::sqlite3_compileoption_used("ENABLE_FTS5"),
+      "System SQLite does not satisfy Gecko storage requirements");
+#endif
 
   /**
    *                    The virtual file system hierarchy

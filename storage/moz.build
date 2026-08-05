@@ -97,8 +97,12 @@ FINAL_LIBRARY = "xul"
 if CONFIG["MOZ_THUNDERBIRD"] or CONFIG["MOZ_SUITE"]:
     DEFINES["MOZ_SQLITE_FTS3_TOKENIZER"] = 1
 
-# Disable auxiliary files persistence if requested.
-if not CONFIG["MOZ_AVOID_DISK_REMNANT_ON_CLOSE"]:
+# Disable auxiliary files persistence if requested. System SQLite may not have
+# Gecko's compile-time journal size limit, so retain its normal WAL lifecycle.
+if (
+    not CONFIG["MOZ_AVOID_DISK_REMNANT_ON_CLOSE"]
+    and not CONFIG["MOZ_SYSTEM_SQLITE"]
+):
     DEFINES["MOZ_SQLITE_PERSIST_AUXILIARY_FILES"] = 1
 
 # The vector extension is enabled only for Firefox, it could be opened up
@@ -106,11 +110,21 @@ if not CONFIG["MOZ_AVOID_DISK_REMNANT_ON_CLOSE"]:
 if CONFIG["MOZ_BUILD_APP"] == "browser":
     DEFINES["MOZ_SQLITE_VEC0_EXT"] = 1
 
+# The bundled library selects an in-memory temp store at compile time on
+# Android and 64-bit builds. Apply the equivalent per connection when sharing
+# the platform SQLite library.
+if CONFIG["MOZ_SYSTEM_SQLITE"] and (
+    CONFIG["OS_TARGET"] == "Android" or CONFIG["HAVE_64BIT_BUILD"]
+):
+    DEFINES["MOZ_MEMORY_TEMP_STORE_PRAGMA"] = True
+
 LOCAL_INCLUDES += [
     "/dom/base",
     "/third_party/sqlite3/ext",
-    "/third_party/sqlite3/src",
 ]
+
+if not CONFIG["MOZ_SYSTEM_SQLITE"]:
+    LOCAL_INCLUDES += ["/third_party/sqlite3/src"]
 
 if CONFIG["MOZ_FOLD_LIBS"]:
     DEFINES["MOZ_FOLD_LIBS"] = True

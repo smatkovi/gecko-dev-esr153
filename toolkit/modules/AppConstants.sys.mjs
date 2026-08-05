@@ -138,6 +138,13 @@ export var AppConstants = Object.freeze({
 
   MOZ_SYSTEM_NSS: @MOZ_SYSTEM_NSS_BOOL@,
 
+  MOZ_SYSTEM_SQLITE:
+#ifdef MOZ_SYSTEM_SQLITE
+    true,
+#else
+    false,
+#endif
+
   MOZ_PLACES: @MOZ_PLACES_BOOL@,
 
   MOZ_REQUIRE_SIGNING: @MOZ_REQUIRE_SIGNING_BOOL@,
@@ -256,7 +263,9 @@ export var AppConstants = Object.freeze({
   MOZ_SELECTABLE_PROFILES: @MOZ_SELECTABLE_PROFILES_BOOL@,
 
   SQLITE_LIBRARY_FILENAME:
-#ifdef MOZ_FOLD_LIBS
+#ifdef MOZ_SYSTEM_SQLITE
+  "",
+#elif MOZ_FOLD_LIBS
   "@DLL_PREFIX@nss3@DLL_SUFFIX@",
 #else
   "@DLL_PREFIX@mozsqlite3@DLL_SUFFIX@",

@@ -20,6 +20,8 @@ extern "C" {
 
 SQLITE_API int sqlite3_carray_init(sqlite3*, char**,
                                    const sqlite3_api_routines*);
+SQLITE_API int sqlite3_vec_init(sqlite3*, char**,
+                                const sqlite3_api_routines*);
 
 #ifdef __cplusplus
 } /* end of the 'extern "C"' block */

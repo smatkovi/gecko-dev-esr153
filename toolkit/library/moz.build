@@ -161,6 +161,9 @@ USE_LIBS += [
     "sqlite",
 ]
 
+if CONFIG["MOZ_SYSTEM_SQLITE"]:
+    OS_LIBS += CONFIG["SQLITE_LIBS"]
+
 if not CONFIG["USE_LIBZ_RS"]:
     USE_LIBS += [
         "zlib",

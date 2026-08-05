@@ -1212,6 +1212,16 @@ nsresult Connection::initializeInternal() {
 
   mConnectionClosed = false;
 
+#ifdef MOZ_SYSTEM_SQLITE
+  // Register Gecko's carray module per connection. The platform SQLite may
+  // already be initialized by the embedding process, so do not use the global
+  // auto-extension registry.
+  int carrayResult = ::sqlite3_carray_init(mDBConn, nullptr, nullptr);
+  if (carrayResult != SQLITE_OK) {
+    return convertResultCode(carrayResult);
+  }
+#endif
+
 #ifdef MOZ_SQLITE_FTS3_TOKENIZER
   DebugOnly<int> srv2 =
       ::sqlite3_db_config(mDBConn, SQLITE_DBCONFIG_ENABLE_FTS3_TOKENIZER, 1, 0);
@@ -1256,6 +1266,13 @@ nsresult Connection::initializeInternal() {
   if (srv != SQLITE_OK) {
     return convertResultCode(srv);
   }
+
+#ifdef MOZ_MEMORY_TEMP_STORE_PRAGMA
+  srv = executeSql(mDBConn, "PRAGMA temp_store = 2;");
+  if (srv != SQLITE_OK) {
+    return convertResultCode(srv);
+  }
+#endif
 
   // Register our built-in SQL functions.
   srv = registerFunctions(mDBConn);
@@ -2805,11 +2822,13 @@ Connection::LoadExtension(const nsACString& aExtensionName,
     return NS_ERROR_NOT_INITIALIZED;
   }
 
+#ifndef MOZ_SYSTEM_SQLITE
   int srv = ::sqlite3_db_config(mDBConn, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION,
                                 1, nullptr);
   if (srv != SQLITE_OK) {
     return NS_ERROR_UNEXPECTED;
   }
+#endif
 
   // Track the loaded extension for later connection cloning operations.
   {
@@ -2824,13 +2843,11 @@ Connection::LoadExtension(const nsACString& aExtensionName,
     }
   }
 
-  nsAutoCString entryPoint("sqlite3_");
-  entryPoint.Append(aExtensionName);
-  entryPoint.AppendLiteral("_init");
+  nsCString extensionName(aExtensionName);
 
   RefPtr<Runnable> loadTask = NS_NewRunnableFunction(
       "mozStorageConnection::LoadExtension",
-      [this, self = RefPtr(this), entryPoint,
+      [this, self = RefPtr(this), extensionName = std::move(extensionName),
        callback = RefPtr(aCallback)]() mutable {
         MOZ_ASSERT(
             !NS_IsMainThread() ||
@@ -2838,6 +2855,23 @@ Connection::LoadExtension(const nsACString& aExtensionName,
                  eventTargetOpenedOn == GetMainThreadSerialEventTarget()),
             "Should happen on main-thread only for synchronous connections "
             "opened on the main thread");
+#ifdef MOZ_SYSTEM_SQLITE
+        int srv;
+        if (extensionName.EqualsLiteral("fts5")) {
+          // Sailfish's platform SQLite provides FTS5 in the core library.
+          srv = SQLITE_OK;
+#  ifdef MOZ_SQLITE_VEC0_EXT
+        } else if (extensionName.EqualsLiteral("vec")) {
+          srv = ::sqlite3_vec_init(mDBConn, nullptr, nullptr);
+#  endif
+        } else {
+          MOZ_ASSERT_UNREACHABLE("Unsupported SQLite extension");
+          srv = SQLITE_ERROR;
+        }
+#else
+        nsAutoCString entryPoint("sqlite3_");
+        entryPoint.Append(extensionName);
+        entryPoint.AppendLiteral("_init");
 #ifdef MOZ_FOLD_LIBS
         int srv = ::sqlite3_load_extension(mDBConn,
                                            MOZ_DLL_PREFIX "nss3" MOZ_DLL_SUFFIX,
@@ -2846,6 +2880,7 @@ Connection::LoadExtension(const nsACString& aExtensionName,
         int srv = ::sqlite3_load_extension(
             mDBConn, MOZ_DLL_PREFIX "mozsqlite3" MOZ_DLL_SUFFIX,
             entryPoint.get(), nullptr);
+#endif
 #endif
         if (!callback) {
           return;

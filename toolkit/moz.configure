@@ -3205,6 +3205,10 @@ with only_when(compile_environment & target_has_linux_kernel):
 # ==============================================================
 include("../build/moz.configure/nss.configure")
 
+# SQLite
+# ==============================================================
+include("../build/moz.configure/sqlite.configure")
+
 
 # Enable or disable running in background task mode: headless for
 # periodic, short-lived, maintenance tasks.

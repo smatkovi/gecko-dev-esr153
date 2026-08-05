@@ -88,6 +88,8 @@ export const AppConstants: Readonly<{
 
   MOZ_SYSTEM_NSS: boolean;
 
+  MOZ_SYSTEM_SQLITE: boolean;
+
   MOZ_PLACES: boolean;
 
   MOZ_REQUIRE_SIGNING: boolean;

@@ -275,6 +275,8 @@ LOCAL_INCLUDES += [
 if CONFIG["MOZ_EMBEDLITE"]:
     LOCAL_INCLUDES += ["/mobile/sailfishos/embedprocess"]
 
+CXXFLAGS += CONFIG["SQLITE_CFLAGS"]
+
 if CONFIG["MOZ_SANDBOX"] and CONFIG["OS_ARCH"] == "WINNT":
     LOCAL_INCLUDES += [
         "/security/sandbox/chromium",

@@ -6,10 +6,12 @@
 #include "nsDebug.h"
 #include "AutoSQLiteLifetime.h"
 #include "sqlite3.h"
-#include "sqlite3_static_ext.h"
-#include "mozilla/DebugOnly.h"
+#ifndef MOZ_SYSTEM_SQLITE
+#  include "sqlite3_static_ext.h"
+#  include "mozilla/DebugOnly.h"
+#endif
 
-#ifdef MOZ_MEMORY
+#if defined(MOZ_MEMORY) && !defined(MOZ_SYSTEM_SQLITE)
 #  include "mozmemory.h"
 #  ifdef MOZ_DMD
 #    include "nsIMemoryReporter.h"
@@ -117,7 +119,7 @@ const sqlite3_mem_methods memMethods = {
 
 }  // namespace
 
-#endif  // MOZ_MEMORY
+#endif  // MOZ_MEMORY && !MOZ_SYSTEM_SQLITE
 
 namespace mozilla {
 
@@ -131,11 +133,16 @@ AutoSQLiteLifetime::AutoSQLiteLifetime() {
 
 // static
 void AutoSQLiteLifetime::Init() {
-#ifdef MOZ_MEMORY
-  sResult = ::sqlite3_config(SQLITE_CONFIG_MALLOC, &memMethods);
-#else
+#ifdef MOZ_SYSTEM_SQLITE
+  // SQLite is shared with the embedding process. It may already be initialized
+  // by Qt, so Gecko must not replace its allocator or take global ownership.
   sResult = SQLITE_OK;
-#endif
+#else
+#  ifdef MOZ_MEMORY
+  sResult = ::sqlite3_config(SQLITE_CONFIG_MALLOC, &memMethods);
+#  else
+  sResult = SQLITE_OK;
+#  endif
 
   if (sResult == SQLITE_OK) {
     // TODO (bug 1191405): do not preallocate the connections caches until we
@@ -152,14 +159,17 @@ void AutoSQLiteLifetime::Init() {
     // the documentation suggests calling this directly.  So we do.
     sResult = ::sqlite3_initialize();
   }
+#endif
 }
 
 AutoSQLiteLifetime::~AutoSQLiteLifetime() {
+#ifndef MOZ_SYSTEM_SQLITE
   // Shutdown the sqlite3 API.  Warn if shutdown did not turn out okay, but
   // there is nothing actionable we can do in that case.
   sResult = ::sqlite3_shutdown();
   NS_WARNING_ASSERTION(sResult == SQLITE_OK,
                        "sqlite3 did not shutdown cleanly.");
+#endif
 }
 
 int AutoSQLiteLifetime::sSingletonEnforcer = 0;
