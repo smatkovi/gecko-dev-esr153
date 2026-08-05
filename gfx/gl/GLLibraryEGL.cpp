@@ -165,7 +165,8 @@ static std::shared_ptr<EglDisplay> GetAndInitDisplay(
     const StaticMutexAutoLock& aProofOfLock) {
   const auto display = egl.fGetDisplay(displayType);
   if (!display) return nullptr;
-  return EglDisplay::Create(egl, display, false, aProofOfLock);
+  return EglDisplay::Create(egl, display, false,
+                            EglDisplay::Ownership::Owned, aProofOfLock);
 }
 
 #ifdef MOZ_WIDGET_GTK
@@ -206,7 +207,8 @@ static std::shared_ptr<EglDisplay> GetAndInitDeviceDisplay(
     return nullptr;
   }
 
-  return EglDisplay::Create(egl, display, true, aProofOfLock);
+  return EglDisplay::Create(egl, display, true,
+                            EglDisplay::Ownership::Owned, aProofOfLock);
 }
 
 static std::shared_ptr<EglDisplay> GetAndInitSoftwareDisplay(
@@ -244,7 +246,8 @@ static std::shared_ptr<EglDisplay> GetAndInitSoftwareDisplay(
     return nullptr;
   }
 
-  return EglDisplay::Create(egl, display, true, aProofOfLock);
+  return EglDisplay::Create(egl, display, true,
+                            EglDisplay::Ownership::Owned, aProofOfLock);
 }
 
 static std::shared_ptr<EglDisplay> GetAndInitSurfacelessDisplay(
@@ -259,7 +262,8 @@ static std::shared_ptr<EglDisplay> GetAndInitSurfacelessDisplay(
   if (display == EGL_NO_DISPLAY) {
     return nullptr;
   }
-  return EglDisplay::Create(egl, display, true, aProofOfLock);
+  return EglDisplay::Create(egl, display, true,
+                            EglDisplay::Ownership::Owned, aProofOfLock);
 }
 #endif
 
@@ -296,7 +300,8 @@ static std::shared_ptr<EglDisplay> GetAndInitWARPDisplay(
     return nullptr;
   }
 
-  return EglDisplay::Create(egl, display, true, aProofOfLock);
+  return EglDisplay::Create(egl, display, true,
+                            EglDisplay::Ownership::Owned, aProofOfLock);
 }
 
 std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplay(
@@ -329,7 +334,8 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplay(
     return nullptr;
   }
 
-  const auto ret = EglDisplay::Create(*this, display, false, lock);
+  const auto ret = EglDisplay::Create(*this, display, false,
+                                      EglDisplay::Ownership::Owned, lock);
 
   if (!ret) {
     const EGLint err = fGetError();
@@ -815,6 +821,7 @@ static void MarkExtensions(const char* rawExtString, bool shouldDumpExts,
 // static
 std::shared_ptr<EglDisplay> EglDisplay::Create(
     GLLibraryEGL& lib, const EGLDisplay display, const bool isWarp,
+    const Ownership ownership,
     const StaticMutexAutoLock& aProofOfLock) {
   // Retrieve the EglDisplay if it already exists
   {
@@ -822,20 +829,28 @@ std::shared_ptr<EglDisplay> EglDisplay::Create(
     if (itr != lib.mActiveDisplays.end()) {
       const auto ret = itr->second.lock();
       if (ret) {
+        if (ret->mOwnership != ownership) {
+          MOZ_ASSERT(false, "Cannot change EGLDisplay ownership");
+          return nullptr;
+        }
         return ret;
       }
     }
   }
 
-  if (!lib.fInitialize(display, nullptr, nullptr)) {
+  if (ownership == Ownership::Owned) {
+    if (!lib.fInitialize(display, nullptr, nullptr)) {
+      return nullptr;
+    }
+  } else if (!lib.fQueryString(display, LOCAL_EGL_VERSION)) {
     return nullptr;
   }
 
   static std::once_flag sMesaLeakFlag;
   std::call_once(sMesaLeakFlag, MesaMemoryLeakWorkaround);
 
-  const auto ret =
-      std::make_shared<EglDisplay>(PrivateUseOnly{}, lib, display, isWarp);
+  const auto ret = std::make_shared<EglDisplay>(PrivateUseOnly{}, lib, display,
+                                                isWarp, ownership);
   // Insert if there is no existing display entry, or assign if there is an
   // expired weak_ptr that failed to lock above and was awaiting removal.
   lib.mActiveDisplays.insert_or_assign(display, ret);
@@ -843,8 +858,12 @@ std::shared_ptr<EglDisplay> EglDisplay::Create(
 }
 
 EglDisplay::EglDisplay(const PrivateUseOnly&, GLLibraryEGL& lib,
-                       const EGLDisplay disp, const bool isWarp)
-    : mLib(&lib), mDisplay(disp), mIsWARP(isWarp) {
+                       const EGLDisplay disp, const bool isWarp,
+                       const Ownership ownership)
+    : mLib(&lib),
+      mDisplay(disp),
+      mIsWARP(isWarp),
+      mOwnership(ownership) {
   const bool shouldDumpExts = GLContext::ShouldDumpExts();
 
   auto rawExtString = mLib->fQueryString(mDisplay, LOCAL_EGL_EXTENSIONS);
@@ -893,7 +912,9 @@ EglDisplay::~EglDisplay() {
   if (itr != mLib->mActiveDisplays.end() && !itr->second.expired()) {
     return;
   }
-  fTerminate();
+  if (mOwnership == Ownership::Owned) {
+    fTerminate();
+  }
   mLib->mActiveDisplays.erase(mDisplay);
 }
 
@@ -917,7 +938,7 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplay(
   return CreateDisplayLocked(forceAccel, forceSoftware, out_failureId, lock);
 }
 
-std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplay(
+std::shared_ptr<EglDisplay> GLLibraryEGL::CreateBorrowedDisplay(
     const EGLDisplay display, nsACString* const out_failureId) {
   if (!display) {
     if (out_failureId && out_failureId->IsEmpty()) {
@@ -927,7 +948,8 @@ std::shared_ptr<EglDisplay> GLLibraryEGL::CreateDisplay(
   }
 
   StaticMutexAutoLock lock(sMutex);
-  auto ret = EglDisplay::Create(*this, display, false, lock);
+  auto ret = EglDisplay::Create(*this, display, false,
+                                EglDisplay::Ownership::Borrowed, lock);
   if (!ret && out_failureId && out_failureId->IsEmpty()) {
     *out_failureId = "FEATURE_FAILURE_EGL_DISPLAY"_ns;
   }
