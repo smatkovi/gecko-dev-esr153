@@ -179,20 +179,31 @@ export var Troubleshoot = {
     return new Promise(resolve => {
       let snapshot = {};
       let numPending = Object.keys(dataProviders).length;
+      let pendingProviders = new Set(Object.keys(dataProviders));
       function providerDone(providerName, providerData) {
+        if (!pendingProviders.delete(providerName)) {
+          return;
+        }
         snapshot[providerName] = providerData;
         if (--numPending == 0) {
           // Ensure that done is always and truly called asynchronously.
           Services.tm.dispatchToMainThread(() => resolve(snapshot));
         }
       }
+      function providerFailed(providerName, err) {
+        let msg =
+          "Troubleshoot data provider failed: " + providerName + "\n" + err;
+        console.error(msg);
+        providerDone(providerName, msg);
+      }
       for (let name in dataProviders) {
         try {
-          dataProviders[name](providerDone.bind(null, name));
+          let result = dataProviders[name](providerDone.bind(null, name));
+          if (result && typeof result.catch == "function") {
+            result.catch(providerFailed.bind(null, name));
+          }
         } catch (err) {
-          let msg = "Troubleshoot data provider failed: " + name + "\n" + err;
-          console.error(msg);
-          providerDone(name, msg);
+          providerFailed(name, err);
         }
       }
     });
@@ -298,10 +309,23 @@ var dataProviders = {
       data.launcherProcessState = Services.appinfo.launcherProcessState;
     } catch (e) {}
 
-    data.fissionAutoStart = Services.appinfo.fissionAutostart;
-    data.fissionDecisionStatus = Services.appinfo.fissionDecisionStatusString;
+    try {
+      data.fissionAutoStart = Services.appinfo.fissionAutostart;
+    } catch (e) {
+      data.fissionAutoStart = false;
+    }
+    try {
+      data.fissionDecisionStatus =
+        Services.appinfo.fissionDecisionStatusString;
+    } catch (e) {
+      data.fissionDecisionStatus = "disabledByDefault";
+    }
 
-    data.remoteAutoStart = Services.appinfo.browserTabsRemoteAutostart;
+    try {
+      data.remoteAutoStart = Services.appinfo.browserTabsRemoteAutostart;
+    } catch (e) {
+      data.remoteAutoStart = false;
+    }
 
     if (Services.policies) {
       data.policiesStatus = Services.policies.status;
@@ -331,13 +355,22 @@ var dataProviders = {
   },
 
   addons: async function addons(done) {
-    let addons = await AddonManager.getAddonsByTypes([
-      "extension",
-      "locale",
-      "dictionary",
-      "sitepermission",
-      "theme",
-    ]);
+    let addons;
+    try {
+      addons = await AddonManager.getAddonsByTypes([
+        "extension",
+        "locale",
+        "dictionary",
+        "sitepermission",
+        "theme",
+      ]);
+    } catch (e) {
+      if (e.result != Cr.NS_ERROR_NOT_INITIALIZED) {
+        throw e;
+      }
+      done([]);
+      return;
+    }
     addons.sort(function (a, b) {
       if (a.isActive != b.isActive) {
         return b.isActive ? 1 : -1;
@@ -445,10 +478,12 @@ var dataProviders = {
       remoteTypes.socket = 1;
     }
 
-    let data = {
-      remoteTypes,
-      maxWebContentProcesses: Services.appinfo.maxWebProcessCount,
-    };
+    let data = { remoteTypes };
+    try {
+      data.maxWebContentProcesses = Services.appinfo.maxWebProcessCount;
+    } catch (e) {
+      data.maxWebContentProcesses = 1;
+    }
 
     done(data);
   },
