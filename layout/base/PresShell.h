@@ -1004,6 +1004,7 @@ class PresShell final : public nsStubDocumentObserver,
    */
   nscolor ComputeBackstopColor(nsIFrame* aDisplayRoot);
 
+  void SetIsActive(bool aIsActive);
   void ActivenessMaybeChanged();
   bool IsActive() const { return mIsActive; }
 
@@ -1907,8 +1908,6 @@ class PresShell final : public nsStubDocumentObserver,
 
   void AddAnchorPosAnchorImpl(const nsAtom* aName, nsIFrame* aFrame,
                               bool aForMerge);
-
-  void SetIsActive(bool aIsActive);
   bool ComputeActiveness() const;
 
   MOZ_CAN_RUN_SCRIPT
