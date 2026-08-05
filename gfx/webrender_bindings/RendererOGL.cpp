@@ -354,7 +354,9 @@ layers::SyncObjectHost* RendererOGL::GetSyncObject() const {
   return mCompositor->GetSyncObject();
 }
 
-gl::GLContext* RendererOGL::gl() const { return mCompositor->gl(); }
+gl::GLContext* RendererOGL::gl() const {
+  return mCompositor->swgl() ? nullptr : mCompositor->gl();
+}
 
 void* RendererOGL::swgl() const { return mCompositor->swgl(); }
 

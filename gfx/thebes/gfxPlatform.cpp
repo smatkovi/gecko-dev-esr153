@@ -2674,6 +2674,16 @@ void gfxPlatform::InitWebRenderConfig() {
   manager.Init();
   manager.ConfigureWebRender();
 
+#ifdef MOZ_WIDGET_QT
+  if (gfxConfig::IsEnabled(Feature::WEBRENDER) &&
+      gl::QtEGLDisplayRequiresSoftwareWebRender()) {
+    gfxConfig::GetFeature(Feature::WEBRENDER)
+        .ForceDisable(FeatureStatus::Unavailable,
+                      "Qt EGL display has no WebRender-compatible config",
+                      "FEATURE_FAILURE_WEBRENDER_QT_EGL_NO_GLES3"_ns);
+  }
+#endif
+
   if (gfxConfig::IsEnabled(Feature::GPU_PROCESS)) {
     gfxVars::SetGPUProcessEnabled(true);
   }
@@ -2744,7 +2754,8 @@ void gfxPlatform::InitWebRenderConfig() {
 
   UpdateForceSubpixelAAWherePossible();
 
-#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK)
+#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK) || \
+    defined(MOZ_EMBEDLITE)
   if (StaticPrefs::gfx_webrender_software_opengl_AtStartup()) {
     gfxVars::SetAllowSoftwareWebRenderOGL(true);
   }
@@ -3937,7 +3948,8 @@ bool gfxPlatform::FallbackFromAcceleration(FeatureStatus aStatus,
   }
 #endif
 
-#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK)
+#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK) || \
+    defined(MOZ_EMBEDLITE)
   // Before we disable OpenGL and HW_COMPOSITING, we should check if we can
   // fallback from WebRender to Software WebRender + OpenGL compositing.
   if (swglFallbackAllowed && gfxVars::AllowSoftwareWebRenderOGL() &&
@@ -3950,7 +3962,7 @@ bool gfxPlatform::FallbackFromAcceleration(FeatureStatus aStatus,
   }
 #endif
   // Android does not want to fallback to SW-WR.
-#ifdef MOZ_WIDGET_GTK
+#if defined(MOZ_WIDGET_GTK) || defined(MOZ_EMBEDLITE)
   if (swglFallbackAllowed && gfxVars::AllowSoftwareWebRenderOGL() &&
       gfxVars::UseSoftwareWebRender()) {
     // Fallback from Software WebRender + OpenGL to Software WebRender.

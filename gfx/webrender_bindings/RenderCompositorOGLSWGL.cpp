@@ -50,7 +50,7 @@ UniquePtr<RenderCompositor> RenderCompositorOGLSWGL::Create(
   }
 
   RefPtr<Compositor> compositor;
-#ifdef MOZ_WIDGET_ANDROID
+#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_EMBEDLITE)
   RefPtr<gl::GLContext> context =
       RenderThread::Get()->SingletonGLForCompositorOGL();
   if (!context) {
@@ -65,9 +65,13 @@ UniquePtr<RenderCompositor> RenderCompositorOGLSWGL::Create(
 
   nsCString log;
   RefPtr<CompositorOGL> compositorOGL;
+#  ifdef MOZ_WIDGET_ANDROID
   compositorOGL = new CompositorOGL(aWidget, /* aSurfaceWidth */ -1,
                                     /* aSurfaceHeight */ -1,
                                     /* aUseExternalSurfaceSize */ true);
+#  else
+  compositorOGL = new CompositorOGL(aWidget);
+#  endif
   if (!compositorOGL->Initialize(context, programs, &log)) {
     gfxCriticalNote << "Failed to initialize CompositorOGL for SWGL: "
                     << log.get();
@@ -115,6 +119,10 @@ RenderCompositorOGLSWGL::~RenderCompositorOGLSWGL() {
 }
 
 gl::GLContext* RenderCompositorOGLSWGL::GetGLContext() {
+  return mCompositor->AsCompositorOGL()->gl();
+}
+
+gl::GLContext* RenderCompositorOGLSWGL::gl() const {
   return mCompositor->AsCompositorOGL()->gl();
 }
 

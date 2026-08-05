@@ -996,6 +996,39 @@ bool CreateConfig(EglDisplay& aEgl, EGLConfig* aConfig, int32_t aDepth,
   return false;
 }
 
+#ifdef MOZ_WIDGET_QT
+bool QtEGLDisplayRequiresSoftwareWebRender() {
+  const EGLDisplay display = GetAppDisplay();
+  if (display == EGL_NO_DISPLAY) {
+    return false;
+  }
+
+  nsCString failureId;
+  const auto lib = GLLibraryEGL::Get(&failureId);
+  if (!lib) {
+    return false;
+  }
+  const auto egl = lib->CreateBorrowedDisplay(display, &failureId);
+  if (!egl) {
+    return false;
+  }
+
+  const auto* extensions = reinterpret_cast<const GLubyte*>(
+      egl->mLib->fQueryString(egl->mDisplay, LOCAL_EGL_EXTENSIONS));
+  if (GLContext::ListHasExtension(extensions,
+                                  "EGL_HYBRIS_native_buffer") ||
+      GLContext::ListHasExtension(extensions,
+                                  "EGL_HYBRIS_native_buffer2")) {
+    return false;
+  }
+
+  EGLConfig config;
+  return !CreateConfig(*egl, &config, /* aDepth */ 32,
+                       /* aEnableDepthBuffer */ false,
+                       /* aUseGles */ true, /* aUseGles3 */ true);
+}
+#endif
+
 // Return true if a suitable EGLConfig was found and pass it out
 // through aConfig.  Return false otherwise.
 //

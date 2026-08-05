@@ -22,6 +22,10 @@ class CompositorWidget;
 }
 namespace gl {
 
+#ifdef MOZ_WIDGET_QT
+bool QtEGLDisplayRequiresSoftwareWebRender();
+#endif
+
 #define IN_GL_CONTEXT_PROVIDER_H
 
 // Null is always there
