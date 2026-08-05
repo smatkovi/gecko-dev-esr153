@@ -3493,8 +3493,17 @@ set_config("MOZ_CRASHREPORTER_MOCK", True, when="MOZ_CRASHREPORTER_MOCK")
 # ==============================================================
 option("--with-embedlite", help="Build with embedlite")
 
-set_config("MOZ_EMBEDLITE", True, when="--with-embedlite")
-set_define("MOZ_EMBEDLITE", True, when="--with-embedlite")
+embedlite = depends_if("--with-embedlite")(lambda _: True)
+
+set_config("MOZ_EMBEDLITE", embedlite)
+set_define("MOZ_EMBEDLITE", embedlite)
+
+geckocamera = pkg_check_modules(
+    "LIBGECKOCAMERA", "geckocamera", when=webrtc & embedlite
+)
+
+set_config("MOZ_ENABLE_WEBRTC_GECKOCAMERA", True, when=geckocamera)
+set_define("MOZ_ENABLE_WEBRTC_GECKOCAMERA", True, when=geckocamera)
 
 
 # Wine

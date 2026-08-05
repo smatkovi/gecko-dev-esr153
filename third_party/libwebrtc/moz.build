@@ -675,6 +675,17 @@ if CONFIG["OS_TARGET"] == "Linux" and CONFIG["TARGET_CPU"] == "x86_64":
         "/third_party/libwebrtc/third_party/libepoxy/libepoxy_gn"
     ]
 
+if CONFIG["MOZ_EMBEDLITE"]:
+    for desktop_capture_dir in [
+        "/third_party/libwebrtc/modules/desktop_capture/desktop_capture_differ_sse2_gn",
+        "/third_party/libwebrtc/modules/desktop_capture/desktop_capture_gn",
+        "/third_party/libwebrtc/modules/desktop_capture/primitives_gn",
+        "/third_party/libwebrtc/modules/portal/portal_gn",
+        "/third_party/libwebrtc/third_party/libepoxy/libepoxy_gn",
+    ]:
+        if desktop_capture_dir in DIRS:
+            DIRS.remove(desktop_capture_dir)
+
 if CONFIG["OS_TARGET"] == "OpenBSD" and CONFIG["TARGET_CPU"] == "aarch64":
 
     DIRS += [
