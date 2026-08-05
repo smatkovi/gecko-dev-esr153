@@ -8,8 +8,11 @@ ChromeUtils.defineESModuleGetters(lazy, {
   AppInfo: "chrome://remote/content/shared/AppInfo.sys.mjs",
   BrowserUtils: "resource://gre/modules/BrowserUtils.sys.mjs",
 });
+import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
 
 import { RemotePageChild } from "resource://gre/actors/RemotePageChild.sys.mjs";
+
+const FIREFOX_ID = "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}";
 
 export class NetErrorChild extends RemotePageChild {
   actorCreated() {
@@ -201,7 +204,7 @@ export class NetErrorChild extends RemotePageChild {
   }
 
   RPMIsFirefox() {
-    return lazy.AppInfo.isFirefox;
+    return Services.appinfo.ID == FIREFOX_ID;
   }
 
   RPMHasConnectivity() {
@@ -242,7 +245,7 @@ export class NetErrorChild extends RemotePageChild {
   }
 
   RPMShowOSXLocalNetworkPermissionWarning() {
-    if (!lazy.AppInfo.isMac) {
+    if (AppConstants.platform != "macosx") {
       return false;
     }
 

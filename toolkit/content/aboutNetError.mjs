@@ -423,6 +423,10 @@ function initPage() {
   const shortDesc = document.getElementById("errorShortDesc");
 
   if (gIsCertError) {
+    // Keep the primary navigation and certificate override controls available
+    // even if collecting optional certificate details fails in an embedder.
+    initCertErrorPageActions();
+
     const bodyTitle = document.querySelector(".title-text");
     const isStsError = window !== window.top || gHasSts;
     const errArgs = { hostname: HOST_NAME };
@@ -451,7 +455,6 @@ function initPage() {
       initPageCertError();
     }
 
-    initCertErrorPageActions();
     setTechnicalDetailsOnCertError();
     return;
   }
