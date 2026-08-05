@@ -123,7 +123,12 @@ export var DownloadUIHelper = {
  *        attach prompts to the most recently active window.
  */
 var DownloadPrompter = function (aParent) {
-  this._prompter = Services.ww.getNewPrompter(aParent);
+  this._prompter = Services.prefs.getBoolPref(
+    "browser.download.useToolkitPrompter",
+    true
+  )
+    ? Services.ww.getNewPrompter(aParent)
+    : null;
 };
 
 DownloadPrompter.prototype = {
