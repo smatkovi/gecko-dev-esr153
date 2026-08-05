@@ -1671,7 +1671,8 @@ static already_AddRefed<gl::GLContext> CreateGLContextANGLE(
 }
 #endif
 
-#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK)
+#if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK) || \
+    defined(MOZ_EMBEDLITE)
 static already_AddRefed<gl::GLContext> CreateGLContextEGL() {
   // Create GLContext with dummy EGLSurface.
   bool forHardwareWebRender = true;
@@ -1708,7 +1709,7 @@ static already_AddRefed<gl::GLContext> CreateGLContext(nsACString& aError) {
   if (gfx::gfxVars::UseWebRenderANGLE()) {
     gl = CreateGLContextANGLE(aError);
   }
-#elif defined(MOZ_WIDGET_ANDROID)
+#elif defined(MOZ_WIDGET_ANDROID) || defined(MOZ_EMBEDLITE)
   gl = CreateGLContextEGL();
 #elif defined(MOZ_WIDGET_GTK)
   if (gfx::gfxVars::UseEGL()) {

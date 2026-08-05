@@ -27,6 +27,7 @@ class RenderCompositorOGLSWGL : public RenderCompositorLayersSWGL {
   virtual ~RenderCompositorOGLSWGL();
 
   gl::GLContext* GetGLContext();
+  gl::GLContext* gl() const override;
 
   bool MakeCurrent() override;
 

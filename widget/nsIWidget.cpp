@@ -1486,6 +1486,8 @@ already_AddRefed<WebRenderLayerManager> nsIWidget::CreateCompositorSession(
     MOZ_ASSERT(supportsAcceleration);
     options.SetAllowSoftwareWebRenderOGL(
         gfx::gfxVars::AllowSoftwareWebRenderOGL());
+#elif defined(MOZ_EMBEDLITE)
+    options.SetAllowSoftwareWebRenderOGL(supportsAcceleration);
 #elif defined(MOZ_WIDGET_GTK)
     if (supportsAcceleration) {
       options.SetAllowSoftwareWebRenderOGL(
