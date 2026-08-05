@@ -50,7 +50,7 @@ export async function loadAndParseOpenSearchEngine(
   if (!sourceURI) {
     throw new TypeError("No URI");
   }
-  if (!/^https?$/i.test(sourceURI.scheme)) {
+  if (!/^(?:https?|file)$/i.test(sourceURI.scheme)) {
     throw new TypeError(
       "Unsupported URI scheme passed to SearchEngine constructor"
     );
