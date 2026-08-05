@@ -20,6 +20,12 @@ XPCOMUtils.defineLazyPreferenceGetter(
   "network.protocol-handler.prompt-from-external",
   true
 );
+XPCOMUtils.defineLazyPreferenceGetter(
+  gPrefs,
+  "requireExternalProtocolPermission",
+  "security.external_protocol_requires_permission",
+  true
+);
 
 const PROTOCOL_HANDLER_OPEN_PERM_KEY = "open-protocol-handler";
 const PERMISSION_KEY_DELIMITER = "^";
@@ -290,6 +296,10 @@ export class nsContentDispatchChooser {
     aTriggeredExternally,
     isStandardProtocol
   ) {
+    if (!gPrefs.requireExternalProtocolPermission) {
+      return true;
+    }
+
     // If a handler is set to open externally by default we skip the dialog.
     const { type, hasDefaultHandler, preferredApplicationHandler } = aHandler;
 
