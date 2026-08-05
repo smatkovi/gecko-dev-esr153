@@ -265,6 +265,28 @@ int32_t VideoCaptureImpl::IncomingFrame(uint8_t* videoFrame,
   return 0;
 }
 
+int32_t VideoCaptureImpl::IncomingVideoBuffer(
+    const rtc::scoped_refptr<VideoFrameBuffer>& buffer,
+    int64_t capture_time) {
+  RTC_CHECK_RUNS_SERIALIZED(&capture_checker_);
+  MutexLock lock(&api_lock_);
+
+  if (_rawDataCallBack) {
+    RTC_LOG(LS_ERROR) << "Raw capture callbacks do not support video buffers";
+    return -1;
+  }
+
+  VideoFrame capture_frame =
+      VideoFrame::Builder()
+          .set_video_frame_buffer(buffer)
+          .set_rtp_timestamp(0)
+          .set_timestamp_ms(rtc::TimeMillis())
+          .set_rotation(_rotateFrame)
+          .build();
+  capture_frame.set_ntp_time_ms(capture_time);
+  return DeliverCapturedFrame(capture_frame);
+}
+
 int32_t VideoCaptureImpl::StartCapture(
     const VideoCaptureCapability& capability) {
   RTC_DCHECK_RUN_ON(&api_checker_);

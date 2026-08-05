@@ -90,6 +90,10 @@ class RTC_EXPORT VideoCaptureImpl : public VideoCaptureModule {
   VideoCaptureImpl();
   ~VideoCaptureImpl() override;
 
+  int32_t IncomingVideoBuffer(
+      const rtc::scoped_refptr<VideoFrameBuffer>& buffer,
+      int64_t capture_time);
+
   // Calls to the public API must happen on a single thread.
   SequenceChecker api_checker_;
   // RaceChecker for members that can be accessed on the API thread while
