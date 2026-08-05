@@ -80,10 +80,12 @@ button:disabled {
   margin-inline-start: 0;
 }
 
+/* EmbedLite's dynamic toolbar overlaps absolutely positioned content. Keep the
+ * advanced panels in the document flow so their controls remain visible. */
 .advanced-panel-container {
-  width: 100%;
-  position: absolute;
-  left: 0;
+  position: static;
+  width: 100vw;
+  margin-inline-start: calc((100% - 100vw) / 2);
 }
 
 .trr-message-container {
