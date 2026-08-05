@@ -1458,7 +1458,22 @@ class nsPresContext : public nsISupports,
 class nsRootPresContext final : public nsPresContext {
  public:
   nsRootPresContext(mozilla::dom::Document* aDocument, nsPresContextType aType);
+  ~nsRootPresContext() override;
   virtual bool IsRoot() const override { return true; }
+
+#ifdef MOZ_EMBEDLITE
+  /**
+   * Ensure that NotifyDidPaintForSubtree is eventually called for the given
+   * transaction, even if no compositor acknowledgement arrives.
+   */
+  void EnsureEventualDidPaintEvent(TransactionId aTransactionId);
+
+  /** Cancel pending did-paint timers through the given transaction. */
+  void CancelDidPaintTimers(TransactionId aTransactionId);
+
+  /** Cancel all pending eventual did-paint timers. */
+  void CancelAllDidPaintTimers();
+#endif
 
   /**
    * Add a runnable that will get called before the next paint. They will get
@@ -1493,6 +1508,17 @@ class nsRootPresContext final : public nsPresContext {
   };
 
   friend class nsPresContext;
+
+#ifdef MOZ_EMBEDLITE
+  struct NotifyDidPaintTimer {
+    TransactionId mTransactionId;
+    nsCOMPtr<nsITimer> mTimer;
+  };
+
+  void CancelDidPaintTimer(TransactionId aTransactionId);
+
+  AutoTArray<NotifyDidPaintTimer, 4> mNotifyDidPaintTimers;
+#endif
 
   nsTArray<nsCOMPtr<nsIRunnable>> mWillPaintObservers;
   nsRevocableEventPtr<RunWillPaintObservers> mWillPaintFallbackEvent;
