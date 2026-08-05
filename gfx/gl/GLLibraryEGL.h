@@ -160,8 +160,8 @@ class GLLibraryEGL final {
 
   std::shared_ptr<EglDisplay> CreateDisplay(bool forceAccel, bool forceSoftware,
                                             nsACString* const out_failureId);
-  std::shared_ptr<EglDisplay> CreateDisplay(EGLDisplay display,
-                                            nsACString* const out_failureId);
+  std::shared_ptr<EglDisplay> CreateBorrowedDisplay(
+      EGLDisplay display, nsACString* const out_failureId);
   std::shared_ptr<EglDisplay> CreateDisplay(ID3D11Device*);
   std::shared_ptr<EglDisplay> DefaultDisplay(nsACString* const out_failureId);
 
@@ -699,9 +699,12 @@ class GLLibraryEGL final {
 
 class EglDisplay final {
  public:
+  enum class Ownership { Borrowed, Owned };
+
   const RefPtr<GLLibraryEGL> mLib;
   const EGLDisplay mDisplay;
   const bool mIsWARP;
+  const Ownership mOwnership;
 
  private:
   std::bitset<UnderlyingValue(EGLExtension::Max)> mAvailableExtensions;
@@ -712,11 +715,12 @@ class EglDisplay final {
 
  public:
   static std::shared_ptr<EglDisplay> Create(
-      GLLibraryEGL&, EGLDisplay, bool isWarp,
+      GLLibraryEGL&, EGLDisplay, bool isWarp, Ownership,
       const StaticMutexAutoLock& aProofOfLock);
 
   // Only `public` for make_shared.
-  EglDisplay(const PrivateUseOnly&, GLLibraryEGL&, EGLDisplay, bool isWarp);
+  EglDisplay(const PrivateUseOnly&, GLLibraryEGL&, EGLDisplay, bool isWarp,
+             Ownership);
 
  public:
   ~EglDisplay();

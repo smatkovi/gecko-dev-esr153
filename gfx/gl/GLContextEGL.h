@@ -167,6 +167,7 @@ class GLContextEGL final : public GLContext {
 
 bool CreateConfig(EglDisplay&, EGLConfig* aConfig, int32_t aDepth,
                   bool aEnableDepthBuffer, bool aUseGles,
+                  bool aUseGles3,
                   bool aAllowFallback = true);
 
 }  // namespace gl

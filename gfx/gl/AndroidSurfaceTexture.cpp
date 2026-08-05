@@ -82,7 +82,7 @@ class AndroidSharedBlitGL final {
     const auto egl = gl::DefaultEglDisplay(&ignored);
     EGLConfig eglConfig;
     CreateConfig(*egl, &eglConfig, /* bpp */ 24, /* depth buffer? */ false,
-                 aUseGles);
+                 aUseGles, /* aUseGles3 */ false);
     auto gl = GLContextEGL::CreateGLContext(egl, {}, eglConfig, EGL_NO_SURFACE,
                                             true, eglConfig, &ignored);
     if (!gl) {

@@ -75,6 +75,11 @@
 #include "nsThreadUtils.h"
 #include "ScopedGLHelpers.h"
 
+#ifdef MOZ_WIDGET_QT
+#  include <QGuiApplication>
+#  include <qpa/qplatformnativeinterface.h>
+#endif
+
 #if defined(MOZ_WIDGET_GTK)
 #  include "mozilla/widget/GtkCompositorWidget.h"
 #  if defined(MOZ_WAYLAND)
@@ -93,6 +98,34 @@ namespace mozilla {
 namespace gl {
 
 using namespace mozilla::widget;
+
+#ifdef MOZ_WIDGET_QT
+// Use Qt's EGLDisplay so that Gecko and the Qt platform plugin share the same
+// Wayland connection.
+static EGLDisplay GetAppDisplay() {
+  auto* const interface = QGuiApplication::platformNativeInterface();
+  if (!interface) {
+    return EGL_NO_DISPLAY;
+  }
+  return static_cast<EGLDisplay>(interface->nativeResourceForIntegration(
+      QByteArrayLiteral("egldisplay")));
+}
+#endif
+
+static std::shared_ptr<EglDisplay> CreateDisplayForApp(
+    GLLibraryEGL& lib, const bool forceAccel,
+    nsACString* const out_failureId) {
+#ifdef MOZ_WIDGET_QT
+  const auto display = GetAppDisplay();
+  if (display != EGL_NO_DISPLAY) {
+    return lib.CreateBorrowedDisplay(display, out_failureId);
+  }
+#endif
+  if (forceAccel) {
+    return lib.CreateDisplay(true, false, out_failureId);
+  }
+  return lib.DefaultDisplay(out_failureId);
+}
 
 #if defined(MOZ_WAYLAND)
 class WaylandOffscreenGLSurface {
@@ -120,7 +153,7 @@ void DeleteWaylandOffscreenGLSurface(EGLSurface surface) {
 
 static bool CreateConfigScreen(EglDisplay&, EGLConfig* const aConfig,
                                const bool aEnableDepthBuffer,
-                               const bool aUseGles);
+                               const bool aUseGles, const bool aUseGles3);
 
 // append three zeros at the end of attribs list to work around
 // EGL implementation bugs that iterate until they find 0, instead of
@@ -203,7 +236,7 @@ already_AddRefed<GLContext> GLContextEGLFactory::CreateImpl(
     gfxCriticalNote << "Failed[3] to load EGL library: " << failureId.get();
     return nullptr;
   }
-  const auto egl = lib->CreateDisplay(true, false, &failureId);
+  const auto egl = CreateDisplayForApp(*lib, true, &failureId);
   if (!egl) {
     gfxCriticalNote << "Failed[3] to create EGL library  display: "
                     << failureId.get();
@@ -211,25 +244,34 @@ already_AddRefed<GLContext> GLContextEGLFactory::CreateImpl(
   }
 
   bool doubleBuffered = true;
+  const bool useGles3 = aHardwareWebRender && aUseGles;
+#ifdef MOZ_WIDGET_QT
+  // Qt's Wayland EGL integration uses an alpha-capable window config even
+  // when the logical screen depth does not include alpha.
+  const bool useAlphaConfig = true;
+#else
+  const bool useAlphaConfig = kIsLinux;
+#endif
 
   EGLConfig config;
   if (aHardwareWebRender && egl->mLib->IsANGLE()) {
     // Force enable alpha channel to make sure ANGLE use correct framebuffer
     // formart
     const int bpp = 32;
-    if (!CreateConfig(*egl, &config, bpp, false, aUseGles)) {
+    if (!CreateConfig(*egl, &config, bpp, false, aUseGles, useGles3)) {
       gfxCriticalNote << "Failed to create EGLConfig for WebRender ANGLE!";
       return nullptr;
     }
-  } else if (kIsLinux) {
+  } else if (useAlphaConfig) {
     const int bpp = 32;
-    if (!CreateConfig(*egl, &config, bpp, false, aUseGles)) {
+    if (!CreateConfig(*egl, &config, bpp, false, aUseGles, useGles3)) {
       gfxCriticalNote << "Failed to create EGLConfig for WebRender!";
       return nullptr;
     }
   } else {
     if (!CreateConfigScreen(*egl, &config,
-                            /* aEnableDepthBuffer */ false, aUseGles)) {
+                            /* aEnableDepthBuffer */ false, aUseGles,
+                            useGles3)) {
       gfxCriticalNote << "Failed to create EGLConfig!";
       return nullptr;
     }
@@ -305,7 +347,12 @@ already_AddRefed<GLContext> GLContextEGLFactory::Create(
 EGLSurface GLContextEGL::CreateEGLSurfaceForCompositorWidget(
     widget::CompositorWidget* aCompositorWidget, const EGLConfig aConfig) {
   nsCString discardFailureId;
-  const auto egl = DefaultEglDisplay(&discardFailureId);
+  const auto lib = GLLibraryEGL::Get(&discardFailureId);
+  if (!lib) {
+    gfxCriticalNote << "Failed to load EGL library 6!";
+    return EGL_NO_SURFACE;
+  }
+  const auto egl = CreateDisplayForApp(*lib, false, &discardFailureId);
   if (!egl) {
     gfxCriticalNote << "Failed to load EGL library 6!";
     return EGL_NO_SURFACE;
@@ -853,7 +900,8 @@ static const EGLint kEGLConfigAttribsRGBA32[] = {
     LOCAL_EGL_ALPHA_SIZE,   8};
 
 bool CreateConfig(EglDisplay& aEgl, EGLConfig* aConfig, int32_t aDepth,
-                  bool aEnableDepthBuffer, bool aUseGles, bool aAllowFallback) {
+                  bool aEnableDepthBuffer, bool aUseGles, bool aUseGles3,
+                  bool aAllowFallback) {
   EGLConfig configs[64];
   std::vector<EGLint> attribs;
   EGLint ncfg = std::size(configs);
@@ -879,10 +927,11 @@ bool CreateConfig(EglDisplay& aEgl, EGLConfig* aConfig, int32_t aDepth,
       return false;
   }
 
-  if (aUseGles) {
-    attribs.push_back(LOCAL_EGL_RENDERABLE_TYPE);
-    attribs.push_back(LOCAL_EGL_OPENGL_ES2_BIT);
-  }
+  MOZ_ASSERT_IF(aUseGles3, aUseGles);
+  attribs.push_back(LOCAL_EGL_RENDERABLE_TYPE);
+  attribs.push_back(aUseGles ? (aUseGles3 ? LOCAL_EGL_OPENGL_ES3_BIT_KHR
+                                          : LOCAL_EGL_OPENGL_ES2_BIT)
+                             : LOCAL_EGL_OPENGL_BIT);
   for (const auto& cur : kTerminationAttribs) {
     attribs.push_back(cur);
   }
@@ -954,21 +1003,24 @@ bool CreateConfig(EglDisplay& aEgl, EGLConfig* aConfig, int32_t aDepth,
 // have the value null.
 static bool CreateConfigScreen(EglDisplay& egl, EGLConfig* const aConfig,
                                const bool aEnableDepthBuffer,
-                               const bool aUseGles) {
+                               const bool aUseGles, const bool aUseGles3) {
   int32_t depth = gfxVars::PrimaryScreenDepth();
-  if (CreateConfig(egl, aConfig, depth, aEnableDepthBuffer, aUseGles)) {
+  if (CreateConfig(egl, aConfig, depth, aEnableDepthBuffer, aUseGles,
+                   aUseGles3)) {
     return true;
   }
 #ifdef MOZ_WIDGET_ANDROID
   // Bug 736005
   // Android doesn't always support 16 bit so also try 24 bit
   if (depth == 16) {
-    return CreateConfig(egl, aConfig, 24, aEnableDepthBuffer, aUseGles);
+    return CreateConfig(egl, aConfig, 24, aEnableDepthBuffer, aUseGles,
+                        aUseGles3);
   }
   // Bug 970096
   // Some devices that have 24 bit screens only support 16 bit OpenGL?
   if (depth == 24) {
-    return CreateConfig(egl, aConfig, 16, aEnableDepthBuffer, aUseGles);
+    return CreateConfig(egl, aConfig, 16, aEnableDepthBuffer, aUseGles,
+                        aUseGles3);
   }
 #endif
   return false;
@@ -1093,7 +1145,8 @@ bool GLContextEGL::FindVisual(int* const out_visualId) {
   EGLConfig config;
   const int bpp = 32;
   if (!CreateConfig(*egl, &config, bpp, /* aEnableDepthBuffer */ false,
-                    /* aUseGles */ false, /* aAllowFallback */ false)) {
+                    /* aUseGles */ false, /* aUseGles3 */ false,
+                    /* aAllowFallback */ false)) {
     // We are on a buggy driver. Do not return a visual so a fallback path can
     // be used. See https://gitlab.freedesktop.org/mesa/mesa/-/issues/149
     return false;
@@ -1219,9 +1272,16 @@ already_AddRefed<GLContext> GLContextProviderEGL::CreateHeadless(
     const GLContextCreateDesc& desc, nsACString* const out_failureId) {
   bool useSoftwareDisplay =
       static_cast<bool>(desc.flags & CreateContextFlags::FORBID_HARDWARE);
-  const auto display = useSoftwareDisplay
-                           ? CreateSoftwareEglDisplay(out_failureId)
-                           : DefaultEglDisplay(out_failureId);
+  std::shared_ptr<EglDisplay> display;
+  if (useSoftwareDisplay) {
+    display = CreateSoftwareEglDisplay(out_failureId);
+  } else {
+    const auto lib = GLLibraryEGL::Get(out_failureId);
+    if (!lib) {
+      return nullptr;
+    }
+    display = CreateDisplayForApp(*lib, false, out_failureId);
+  }
   if (!display) {
     return nullptr;
   }

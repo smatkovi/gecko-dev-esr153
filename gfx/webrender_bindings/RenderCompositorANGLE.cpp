@@ -118,7 +118,8 @@ bool RenderCompositorANGLE::Initialize(nsACString& aError) {
   const auto& gle = gl::GLContextEGL::Cast(mGL);
   const auto& egl = gle->mEgl;
   if (!gl::CreateConfig(*egl, &mEGLConfig, /* bpp */ 32,
-                        /* enableDepthBuffer */ false, mGL->IsGLES())) {
+                        /* enableDepthBuffer */ false, mGL->IsGLES(),
+                        mGL->IsGLES() && mGL->Version() >= 300)) {
     aError.Assign("RcANGLE(create EGLConfig failed)"_ns);
     return false;
   }
