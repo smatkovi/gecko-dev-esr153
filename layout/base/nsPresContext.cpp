@@ -37,6 +37,9 @@
 #include "mozilla/dom/Document.h"
 #include "mozilla/dom/DocumentInlines.h"
 #include "nsIPrintSettings.h"
+#ifdef MOZ_EMBEDLITE
+#  include "nsITimer.h"
+#endif
 #include "nsLanguageAtomService.h"
 #include "mozilla/LookAndFeel.h"
 #include "nsIInterfaceRequestorUtils.h"
@@ -1030,6 +1033,12 @@ void nsPresContext::DetachPresShell() {
   }
 
   mPresShell = nullptr;
+
+#ifdef MOZ_EMBEDLITE
+  if (IsRoot()) {
+    static_cast<nsRootPresContext*>(this)->CancelAllDidPaintTimers();
+  }
+#endif
 
   CancelManagedPostRefreshObservers();
 
@@ -2395,7 +2404,8 @@ void nsPresContext::NotifyInvalidation(TransactionId aTransactionId,
                                        const nsRect& aRect) {
   MOZ_ASSERT(GetContainerWeak(), "Invalidation in detached pres context");
 
-  for (nsPresContext* pc = this; pc; pc = pc->GetParentPresContext()) {
+  nsPresContext* pc = this;
+  for (; pc; pc = pc->GetParentPresContext()) {
     TransactionInvalidations* transaction =
         pc->GetInvalidations(aTransactionId);
     if (transaction) {
@@ -2404,6 +2414,14 @@ void nsPresContext::NotifyInvalidation(TransactionId aTransactionId,
     transaction = pc->mTransactions.AppendElement();
     transaction->mTransactionId = aTransactionId;
   }
+
+#ifdef MOZ_EMBEDLITE
+  if (!pc) {
+    if (nsRootPresContext* root = GetRootPresContext()) {
+      root->EnsureEventualDidPaintEvent(aTransactionId);
+    }
+  }
+#endif
 
   TransactionInvalidations* transaction = GetInvalidations(aTransactionId);
   MOZ_ASSERT(transaction);
@@ -2483,11 +2501,18 @@ void nsPresContext::NotifyRevokingDidPaint(TransactionId aTransactionId) {
 
 void nsPresContext::NotifyDidPaintForSubtree(
     TransactionId aTransactionId, const mozilla::TimeStamp& aTimeStamp) {
+#ifdef MOZ_EMBEDLITE
+  if (IsRoot()) {
+    static_cast<nsRootPresContext*>(this)->CancelDidPaintTimers(
+        aTransactionId);
+  }
+#endif
+
   if (mFirstContentfulPaintTransactionId && !mHadContentfulPaintComposite) {
     if (aTransactionId >= *mFirstContentfulPaintTransactionId) {
       mHadContentfulPaintComposite = true;
       RefPtr<nsDOMNavigationTiming> timing = mDocument->GetNavigationTiming();
-      if (timing && !IsPrintingOrPrintPreview()) {
+      if (timing && !IsPrintingOrPrintPreview() && !aTimeStamp.IsNull()) {
         timing->NotifyContentfulCompositeForRootContentDocument(aTimeStamp);
       }
     }
@@ -3183,6 +3208,80 @@ void nsPresContext::ValidatePresShellAndDocumentReleation() const {
 nsRootPresContext::nsRootPresContext(dom::Document* aDocument,
                                      nsPresContextType aType)
     : nsPresContext(aDocument, aType) {}
+
+nsRootPresContext::~nsRootPresContext() {
+#ifdef MOZ_EMBEDLITE
+  CancelAllDidPaintTimers();
+#endif
+}
+
+#ifdef MOZ_EMBEDLITE
+void nsRootPresContext::EnsureEventualDidPaintEvent(
+    TransactionId aTransactionId) {
+  for (const NotifyDidPaintTimer& timer : mNotifyDidPaintTimers) {
+    if (timer.mTransactionId == aTransactionId) {
+      return;
+    }
+  }
+
+  nsCOMPtr<nsITimer> timer;
+  WeakPtr<nsRootPresContext> weakThis = this;
+  nsresult rv = NS_NewTimerWithCallback(
+      getter_AddRefs(timer),
+      [weakThis, aTransactionId](nsITimer*) {
+        if (!weakThis) {
+          return;
+        }
+
+        weakThis->CancelDidPaintTimer(aTransactionId);
+        if (!weakThis->GetPresShell() || !weakThis->GetContainerWeak() ||
+            !weakThis->GetInvalidations(aTransactionId)) {
+          return;
+        }
+
+        nsAutoScriptBlocker scriptBlocker;
+        weakThis->NotifyDidPaintForSubtree(aTransactionId);
+      },
+      100, nsITimer::TYPE_ONE_SHOT,
+      "nsRootPresContext::NotifyDidPaintForSubtree",
+      GetMainThreadSerialEventTarget());
+
+  if (NS_SUCCEEDED(rv)) {
+    NotifyDidPaintTimer* entry = mNotifyDidPaintTimers.AppendElement();
+    entry->mTransactionId = aTransactionId;
+    entry->mTimer = timer;
+  }
+}
+
+void nsRootPresContext::CancelDidPaintTimer(TransactionId aTransactionId) {
+  for (uint32_t i = 0; i < mNotifyDidPaintTimers.Length(); ++i) {
+    if (mNotifyDidPaintTimers[i].mTransactionId == aTransactionId) {
+      mNotifyDidPaintTimers[i].mTimer->Cancel();
+      mNotifyDidPaintTimers.RemoveElementAt(i);
+      return;
+    }
+  }
+}
+
+void nsRootPresContext::CancelDidPaintTimers(TransactionId aTransactionId) {
+  uint32_t i = 0;
+  while (i < mNotifyDidPaintTimers.Length()) {
+    if (mNotifyDidPaintTimers[i].mTransactionId <= aTransactionId) {
+      mNotifyDidPaintTimers[i].mTimer->Cancel();
+      mNotifyDidPaintTimers.RemoveElementAt(i);
+    } else {
+      ++i;
+    }
+  }
+}
+
+void nsRootPresContext::CancelAllDidPaintTimers() {
+  for (const NotifyDidPaintTimer& timer : mNotifyDidPaintTimers) {
+    timer.mTimer->Cancel();
+  }
+  mNotifyDidPaintTimers.Clear();
+}
+#endif
 
 void nsRootPresContext::AddWillPaintObserver(nsIRunnable* aRunnable) {
   if (!mWillPaintFallbackEvent.IsPending()) {
