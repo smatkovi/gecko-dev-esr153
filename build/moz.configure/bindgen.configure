@@ -96,6 +96,11 @@ option(
     help="Absolute path to a directory containing Clang/LLVM libraries for bindgen (version 3.9.x or above)",
 )
 option(
+    env="MOZ_LIBCLANG_BINDGEN_PATH",
+    nargs=1,
+    help="Host libclang directory loaded by Rust bindgen build scripts",
+)
+option(
     "--with-clang-path",
     nargs=1,
     help="Absolute path to a Clang binary for bindgen (version 3.9.x or above)",
@@ -313,6 +318,16 @@ set_config("MOZ_LIBCLANG_PATH", bindgen_config_paths.libclang_path)
 set_config("MOZ_CLANG_PATH", bindgen_config_paths.clang_path)
 
 
+@depends("MOZ_LIBCLANG_BINDGEN_PATH", bindgen_config_paths.libclang_path)
+def bindgen_runtime_libclang_path(path, default):
+    if path:
+        return path[0]
+    return default
+
+
+set_config("MOZ_LIBCLANG_BINDGEN_PATH", bindgen_runtime_libclang_path)
+
+
 @depends(
     target,
     cxx_compiler,
@@ -354,6 +369,8 @@ def basic_bindgen_cflags(
             # to exclude hidden symbols from the generated file.
             "-DHAVE_VISIBILITY_HIDDEN_ATTRIBUTE=1",
         ]
+    else:
+        args.append("-std=gnu++17")
 
     return args + (clang_flags or []) + (all_arm_flags or [])
 
