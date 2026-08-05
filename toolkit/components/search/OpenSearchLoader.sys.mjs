@@ -107,7 +107,7 @@ export async function loadAndParseOpenSearchEngine(sourceURI, lastModified) {
       Cr.NS_ERROR_UNEXPECTED
     );
   }
-  if (!/^https?$/i.test(sourceURI.scheme)) {
+  if (!/^(?:https?|file)$/i.test(sourceURI.scheme)) {
     throw Components.Exception(
       "Invalid URI passed to SearchEngine constructor",
       Cr.NS_ERROR_INVALID_ARG
