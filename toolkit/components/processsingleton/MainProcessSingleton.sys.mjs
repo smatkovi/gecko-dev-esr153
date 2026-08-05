@@ -15,6 +15,11 @@ MainProcessSingleton.prototype = {
       case "app-startup": {
         // Imported for side-effects.
         ChromeUtils.importESModule(
+          "resource://gre/modules/ActorManagerParent.sys.mjs"
+        );
+
+        // Imported for side-effects.
+        ChromeUtils.importESModule(
           "resource://gre/modules/CustomElementsListener.sys.mjs"
         );
 
