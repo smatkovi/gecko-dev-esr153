@@ -1596,9 +1596,12 @@ export const SearchService = new (class SearchService {
       this.#maybeThrowErrorInTest("LoadSettingsAddonManager");
       const settings = await this._settings.get();
 
-      initSection = "FetchEngines";
-      this.#maybeThrowErrorInTest(initSection);
-      const refinedConfig = await this._fetchEngineSelectorEngines();
+      let refinedConfig;
+      if (Services.appinfo.ID != "embedliteBrowser@embed.mozilla.org") {
+        initSection = "FetchEngines";
+        this.#maybeThrowErrorInTest(initSection);
+        refinedConfig = await this._fetchEngineSelectorEngines();
+      }
 
       initSection = "LoadEngines";
       this.#maybeThrowErrorInTest(initSection);
@@ -1847,7 +1850,10 @@ export const SearchService = new (class SearchService {
             return policyEngine;
           }
         }
-        if (activePolicies.SearchEngines.Remove?.includes(defaultEngine.name)) {
+        if (
+          defaultEngine &&
+          activePolicies.SearchEngines.Remove?.includes(defaultEngine.name)
+        ) {
           defaultEngine = null;
         }
       }
@@ -1881,13 +1887,20 @@ export const SearchService = new (class SearchService {
    *   The refined search configuration for this user.
    */
   async #loadEngines(settings, refinedConfig) {
+    lazy.logConsole.debug("#loadEngines: start");
+    if (Services.appinfo.ID == "embedliteBrowser@embed.mozilla.org") {
+      await this.#loadEnginesFromSettings(settings);
+      this._settings.migrateEngineIds(settings);
+      lazy.logConsole.debug("#loadEngines: done");
+      return;
+    }
+
     // Get user's current settings and search engine before we load engines from
     // config. These values will be compared after engines are loaded.
     let prevMetaData = { ...settings?.metaData };
     let prevCurrentEngineId = prevMetaData.defaultEngineId;
     let prevAppDefaultEngineId = prevMetaData?.appDefaultEngineId;
 
-    lazy.logConsole.debug("#loadEngines: start");
     this.#setDefaultFromSelector(refinedConfig);
 
     this.#loadEnginesFromConfig(refinedConfig.engines, settings);
