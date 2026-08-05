@@ -8,7 +8,10 @@
 
 #include "libwebrtcglue/SystemTime.h"
 #include "system_wrappers/include/clock.h"
-#include "video_engine/desktop_capture_impl.h"
+
+#ifndef MOZ_EMBEDLITE
+#  include "video_engine/desktop_capture_impl.h"
+#endif
 
 #ifdef MOZ_WIDGET_ANDROID
 #  include "mozilla/jni/Utils.h"
@@ -195,7 +198,8 @@ VideoEngine::CaptureEntry::CaptureEndedEvent() {
   if (!mDesktopImpl) {
     return nullptr;
   }
-#if !defined(WEBRTC_ANDROID) && !defined(WEBRTC_IOS)
+#if !defined(WEBRTC_ANDROID) && !defined(WEBRTC_IOS) && \
+    !defined(MOZ_EMBEDLITE)
   return mDesktopImpl->CaptureEndedEvent();
 #else
   return nullptr;

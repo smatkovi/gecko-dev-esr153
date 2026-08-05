@@ -49,7 +49,7 @@ if CONFIG["MOZ_WEBRTC"]:
             "-fobjc-arc",
         ]
 
-    if CONFIG["OS_TARGET"] != "Android":
+    if CONFIG["OS_TARGET"] != "Android" and not CONFIG["MOZ_EMBEDLITE"]:
         SOURCES += [
             "video_engine/desktop_capture_impl.cc",
             "video_engine/tab_capturer.cc",

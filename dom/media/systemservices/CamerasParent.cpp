@@ -33,7 +33,6 @@
 #include "nsIThread.h"
 #include "nsThreadUtils.h"
 #include "nsNetUtil.h"
-#include "video_engine/desktop_capture_impl.h"
 #include "video_engine/video_capture_factory.h"
 
 #include "api/video/video_frame_buffer.h"
@@ -428,6 +427,13 @@ VideoEngine* CamerasParent::EnsureInitialized(int aEngine) {
   MOZ_ASSERT(mVideoCaptureThread->IsOnCurrentThread());
   LOG_VERBOSE("CamerasParent(%p)::%s", this, __func__);
   CaptureEngine capEngine = static_cast<CaptureEngine>(aEngine);
+
+#ifdef MOZ_EMBEDLITE
+  if (capEngine != CameraEngine) {
+    LOG("Capture engine %d is not supported by EmbedLite", aEngine);
+    return nullptr;
+  }
+#endif
 
   if (VideoEngine* engine = mEngines->ElementAt(capEngine); engine) {
     return engine;

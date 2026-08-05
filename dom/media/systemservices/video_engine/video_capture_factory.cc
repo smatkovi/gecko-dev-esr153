@@ -7,8 +7,11 @@
 #include "video_capture_factory.h"
 
 #include "mozilla/StaticPrefs_media.h"
-#include "desktop_capture_impl.h"
 #include "VideoEngine.h"
+
+#ifndef MOZ_EMBEDLITE
+#  include "desktop_capture_impl.h"
+#endif
 
 #if defined(WEBRTC_USE_PIPEWIRE)
 #  include "video_engine/placeholder_device_info.h"
@@ -68,8 +71,7 @@ VideoCaptureFactory::CreateDeviceInfo(
     return deviceInfo;
   }
 
-#if defined(WEBRTC_ANDROID) || defined(WEBRTC_IOS)
-  MOZ_ASSERT("CreateDeviceInfo NO DESKTOP CAPTURE IMPL ON ANDROID" == nullptr);
+#if defined(WEBRTC_ANDROID) || defined(WEBRTC_IOS) || defined(MOZ_EMBEDLITE)
   return nullptr;
 #else
   return webrtc::DesktopCaptureImpl::CreateDeviceInfo(aId, aType);
@@ -91,10 +93,8 @@ VideoCaptureFactory::CreateVideoCapture(
     return result;
   }
 
-#if defined(WEBRTC_ANDROID) || defined(WEBRTC_IOS)
-  MOZ_ASSERT("CreateVideoCapture NO DESKTOP CAPTURE IMPL ON ANDROID" ==
-             nullptr);
-#else
+#if !defined(WEBRTC_ANDROID) && !defined(WEBRTC_IOS) && \
+    !defined(MOZ_EMBEDLITE)
   result.mDesktopImpl =
       webrtc::DesktopCaptureImpl::Create(aModuleId, aUniqueId, aType);
   result.mCapturer =
