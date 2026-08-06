@@ -55,7 +55,7 @@ elif CONFIG["OS_TARGET"] == "Linux":
         "fallback/FallbackVibration.cpp",
         "linux/LinuxProcessPriority.cpp",
     ]
-    if CONFIG["MOZ_ENABLE_DBUS"]:
+    if CONFIG["MOZ_ENABLE_DBUS"] and CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
         UNIFIED_SOURCES += [
             "linux/UPowerClient.cpp",
         ]
@@ -91,7 +91,7 @@ elif CONFIG["OS_TARGET"] in ("OpenBSD", "NetBSD", "FreeBSD", "DragonFly"):
         "fallback/FallbackSensor.cpp",
         "fallback/FallbackVibration.cpp",
     ]
-    if CONFIG["MOZ_ENABLE_DBUS"]:
+    if CONFIG["MOZ_ENABLE_DBUS"] and CONFIG["MOZ_WIDGET_TOOLKIT"] == "gtk":
         UNIFIED_SOURCES += [
             "linux/UPowerClient.cpp",
         ]
