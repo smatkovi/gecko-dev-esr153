@@ -93,6 +93,7 @@ endif
 cargo_rustc_flags = $(CARGO_RUSTCFLAGS)
 ifndef DEVELOPER_OPTIONS
 ifndef MOZ_DEBUG_RUST
+ifndef MOZ_RUST_LTO_OFF
 # Enable link-time optimization for release builds, but not when linking
 # gkrust_gtest. And not when doing cross-language LTO.
 ifndef MOZ_LTO_RUST_CROSS
@@ -105,6 +106,7 @@ cargo_rustc_flags += -Clto$(if $(filter full,$(MOZ_LTO_RUST_CROSS)),=fat)
 endif
 # We need -Cembed-bitcode=yes for all crates when using -Clto.
 RUSTFLAGS += -Cembed-bitcode=yes
+endif
 endif
 endif
 endif
@@ -131,6 +133,10 @@ ifdef DEVELOPER_OPTIONS
 # By default the Rust compiler will perform a limited kind of ThinLTO on each
 # crate. For local builds this additional optimization is not worth the
 # increase in compile time so we opt out of it.
+rustflags_override += -Clto=off
+endif
+
+ifdef MOZ_RUST_LTO_OFF
 rustflags_override += -Clto=off
 endif
 
