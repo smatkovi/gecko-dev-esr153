@@ -25,7 +25,7 @@
 #  include "mozilla/webgpu/SharedTextureD3D11.h"
 #endif
 
-#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
+#ifdef MOZ_WIDGET_GTK
 #  include "mozilla/webgpu/SharedTextureDMABuf.h"
 #endif
 
@@ -115,6 +115,7 @@ extern int32_t wgpu_server_get_dma_buf_fd(WGPUWebGPUParentPtr aParent,
     return -1;
   }
 
+#ifdef MOZ_WIDGET_GTK
   auto* textureDMABuf = texture->AsSharedTextureDMABuf();
   if (!textureDMABuf) {
     MOZ_ASSERT_UNREACHABLE("unexpected to be called");
@@ -123,6 +124,9 @@ extern int32_t wgpu_server_get_dma_buf_fd(WGPUWebGPUParentPtr aParent,
   auto fd = textureDMABuf->CloneDmaBufFd();
   // fd should be closed by the caller.
   return fd.release();
+#else
+  return -1;
+#endif
 }
 #endif
 
@@ -137,11 +141,15 @@ extern const WGPUVkImageHandle* wgpu_server_get_vk_image_handle(
     return nullptr;
   }
 
+#  ifdef MOZ_WIDGET_GTK
   auto* textureDMABuf = texture->AsSharedTextureDMABuf();
   if (!textureDMABuf) {
     return nullptr;
   }
   return textureDMABuf->GetHandle();
+#  else
+  return nullptr;
+#  endif
 }
 #endif
 
@@ -1922,7 +1930,7 @@ Maybe<ffi::WGPUFfiLUID> WebGPUParent::GetCompositorDeviceLuid() {
 }
 #endif
 
-#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
+#ifdef MOZ_WIDGET_GTK
 VkImageHandle::~VkImageHandle() {
   if (!mParent) {
     return;

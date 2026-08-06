@@ -142,7 +142,7 @@ void CanvasContext::Configure(const dom::GPUCanvasConfiguration& aConfig,
                        "WebRender is not using hardware acceleration";
     mUseSharedTextureInSwapChain = false;
   }
-#elif defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
+#elif defined(MOZ_WIDGET_GTK)
   // When DMABufDevice is not enabled, disable shared texture in swap chain.
   const auto& modifiers = gfx::gfxVars::DMABufModifiersARGB();
   if (modifiers.IsEmpty()) {
@@ -150,6 +150,9 @@ void CanvasContext::Configure(const dom::GPUCanvasConfiguration& aConfig,
                        "missing GBM_FORMAT_ARGB8888 dmabuf format";
     mUseSharedTextureInSwapChain = false;
   }
+#elif defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
+  // Other Linux widget toolkits do not build the GTK DMA-BUF backend.
+  mUseExternalTextureInSwapChain = false;
 #endif
 
   mCurrentTexture = aConfig.mDevice->InitSwapChain(

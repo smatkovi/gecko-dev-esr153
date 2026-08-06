@@ -29,6 +29,11 @@
 #  include "mozilla/layers/GpuProcessD3D11TextureMap.h"
 #  include "mozilla/layers/TextureD3D11.h"
 #endif
+
+#ifdef MOZ_WIDGET_GTK
+#  include "mozilla/webgpu/SharedTextureDMABuf.h"
+#endif
+
 #ifdef XP_MACOSX
 #  include "mozilla/gfx/MacIOSurface.h"
 #  include "mozilla/layers/MacIOSurfaceTextureHostOGL.h"
