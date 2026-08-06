@@ -51,7 +51,6 @@ class nsIPrincipal;
 #  include "mozilla/WidgetUtilsGtk.h"
 #  include "GeoclueLocationProvider.h"
 #  include "PortalLocationProvider.h"
-#  include "mozilla/WidgetUtilsGtk.h"
 #endif
 
 #ifdef MOZ_WIDGET_COCOA

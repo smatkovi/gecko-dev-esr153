@@ -11,7 +11,8 @@
 #include "mozilla/Logging.h"
 
 // Pipewire detection support
-#if defined(WEBRTC_USE_PIPEWIRE)
+#if defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_WIDGET_GTK)
+#  include "mozilla/StaticPrefs_media.h"
 #  include "modules/desktop_capture/desktop_capturer.h"
 #  include "mozilla/StaticPrefs_media.h"
 #endif
@@ -66,7 +67,7 @@ void MediaEngineWebRTC::EnumerateVideoDevices(
                      aMediaSource == MediaSourceEnum::Screen ||
                      aMediaSource == MediaSourceEnum::Window;
   (void)desktopKind;  // Suppress "unused variable" on Windows and Android.
-#if defined(WEBRTC_USE_PIPEWIRE)
+#if defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_WIDGET_GTK)
   bool canRequestOsLevelPrompt =
       mozilla::StaticPrefs::media_webrtc_capture_allow_pipewire() &&
       webrtc::DesktopCapturer::IsRunningUnderWayland() && desktopKind;
