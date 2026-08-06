@@ -9708,7 +9708,7 @@ static void GetSpoofedSystemFontForRFP(LookAndFeel::FontID aFontID,
   // Keep consistency with nsLookAndFeel::NativeGetFont.
   aName = u"Roboto"_ns;
   aStyle.size = 12;
-#elif defined(MOZ_WIDGET_GTK)
+#elif defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
   // On Linux, there is not a default. For example, GNOME on Debian uses
   // Cantarell, 14.667px. Ubuntu Mate uses the Ubuntu font, but also 14.667px.
   // Fedora with KDE uses Noto Sans, 13.3333px, but it uses Noto Sans on
