@@ -49,7 +49,7 @@ class nsIPrincipal;
 #  include "AndroidLocationProvider.h"
 #endif
 
-#ifdef MOZ_ENABLE_DBUS
+#if defined(MOZ_WIDGET_GTK) && defined(MOZ_ENABLE_DBUS)
 #  include "mozilla/WidgetUtilsGtk.h"
 #  include "GeoclueLocationProvider.h"
 #  include "PortalLocationProvider.h"
