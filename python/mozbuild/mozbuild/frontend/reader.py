@@ -27,6 +27,7 @@ import time
 import traceback
 import types
 from collections import OrderedDict, defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures.process import ProcessPoolExecutor
 from io import StringIO
 from itertools import chain
@@ -860,17 +861,20 @@ class BuildReader:
             self.config.topsrcdir, ignore=ignores
         )
 
-        max_workers = cpu_count()
-        if sys.platform.startswith("win"):
-            # In python 3, on Windows, ProcessPoolExecutor uses
-            # _winapi.WaitForMultipleObjects, which doesn't work on large
-            # number of objects. It also has some automatic capping to avoid
-            # _winapi.WaitForMultipleObjects being unhappy as a consequence,
-            # but that capping is actually insufficient in python 3.7 and 3.8
-            # (as well as inexistent in older versions). So we cap ourselves
-            # to 60, see https://bugs.python.org/issue26903#msg365886.
-            max_workers = min(max_workers, 60)
-        self._gyp_worker_pool = ProcessPoolExecutor(max_workers=max_workers)
+        if os.environ.get("MOZBUILD_NO_FORK"):
+            self._gyp_worker_pool = ThreadPoolExecutor(max_workers=1)
+        else:
+            max_workers = cpu_count()
+            if sys.platform.startswith("win"):
+                # In python 3, on Windows, ProcessPoolExecutor uses
+                # _winapi.WaitForMultipleObjects, which doesn't work on large
+                # number of objects. It also has some automatic capping to avoid
+                # _winapi.WaitForMultipleObjects being unhappy as a consequence,
+                # but that capping is actually insufficient in python 3.7 and 3.8
+                # (as well as inexistent in older versions). So we cap ourselves
+                # to 60, see https://bugs.python.org/issue26903#msg365886.
+                max_workers = min(max_workers, 60)
+            self._gyp_worker_pool = ProcessPoolExecutor(max_workers=max_workers)
         self._gyp_processors = []
         self._execution_time = 0.0
         self._file_count = 0

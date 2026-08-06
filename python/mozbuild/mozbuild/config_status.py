@@ -193,7 +193,11 @@ def config_status(
     # `definitions` objects are unfortunately not picklable, which is a
     # requirement for "spawn" method. It's fine under "fork" method. This
     # basically excludes Windows from our optimization, we can live with it.
-    if len(selected_backends) > 1 and get_start_method() == "fork":
+    if (
+        len(selected_backends) > 1
+        and get_start_method() == "fork"
+        and not os.environ.get("MOZBUILD_NO_FORK")
+    ):
         # See https://github.com/python/cpython/commit/39889864c09741909da4ec489459d0197ea8f1fc
         # For why we cap the process count. There's also an overhead to setup
         # new processes, and not that many backends anyway.
