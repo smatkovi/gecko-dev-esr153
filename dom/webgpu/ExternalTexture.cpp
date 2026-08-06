@@ -11,7 +11,7 @@
 #  include "mozilla/webgpu/ExternalTextureD3D11.h"
 #endif
 
-#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
+#ifdef MOZ_WIDGET_GTK
 #  include "mozilla/webgpu/ExternalTextureDMABuf.h"
 #endif
 
@@ -39,7 +39,7 @@ UniquePtr<ExternalTexture> ExternalTexture::Create(
 #ifdef XP_WIN
   texture = ExternalTextureD3D11::Create(aParent, aDeviceId, aWidth, aHeight,
                                          aFormat, aUsage);
-#elif defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
+#elif defined(MOZ_WIDGET_GTK)
   texture = ExternalTextureDMABuf::Create(aParent, aDeviceId, aWidth, aHeight,
                                           aFormat, aUsage);
 #elif defined(XP_MACOSX)

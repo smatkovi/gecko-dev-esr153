@@ -245,7 +245,7 @@ class WebGPUParent final : public PWebGPUParent, public SupportsWeakPtr {
   std::unordered_map<RawId, RefPtr<gfx::FileHandleWrapper>> mDeviceFenceHandles;
 };
 
-#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
+#ifdef MOZ_WIDGET_GTK
 class VkImageHandle {
  public:
   explicit VkImageHandle(WebGPUParent* aParent,
