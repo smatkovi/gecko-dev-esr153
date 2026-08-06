@@ -17,7 +17,8 @@
 #  include "video_engine/placeholder_device_info.h"
 #endif
 
-#if defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_ENABLE_DBUS)
+#if defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_ENABLE_DBUS) && \
+    defined(MOZ_WIDGET_GTK)
 #  include "mozilla/widget/AsyncDBus.h"
 #endif
 
@@ -32,7 +33,7 @@ VideoCaptureFactory::VideoCaptureFactory() {
   // enabled.
   mVideoCaptureOptions->set_allow_v4l2(true);
   bool allowPipeWire = false;
-#  if defined(WEBRTC_USE_PIPEWIRE)
+#  if defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_WIDGET_GTK)
   allowPipeWire =
       mozilla::StaticPrefs::media_webrtc_camera_allow_pipewire_AtStartup();
   mVideoCaptureOptions->set_allow_pipewire(allowPipeWire);
@@ -147,7 +148,8 @@ auto VideoCaptureFactory::InitCameraBackend()
 
 auto VideoCaptureFactory::HasCameraDevice()
     -> RefPtr<VideoCaptureFactory::HasCameraDevicePromise> {
-#if defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_ENABLE_DBUS)
+#if defined(WEBRTC_USE_PIPEWIRE) && defined(MOZ_ENABLE_DBUS) && \
+    defined(MOZ_WIDGET_GTK)
   if (mVideoCaptureOptions && mVideoCaptureOptions->allow_pipewire()) {
     return widget::CreateDBusProxyForBus(
                G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
