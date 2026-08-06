@@ -559,6 +559,13 @@ class nsBaseWidget : public nsIWidget, public nsSupportsWeakReference {
     return nsIWidget::CreateChildWindow();
   }
 
+  virtual already_AddRefed<nsIWidget> AllocateChildPuppetWidget(
+      InitData& aInitData) {
+    MOZ_ASSERT(aInitData.mWindowType == WindowType::Popup,
+               "Creating non-popup puppet widget?");
+    return nsIWidget::CreatePuppetWidget(nullptr);
+  }
+
   WindowRenderer* CreateFallbackRenderer();
 
   PopupType GetPopupType() const { return mPopupType; }

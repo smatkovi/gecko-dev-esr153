@@ -490,13 +490,9 @@ already_AddRefed<nsIWidget> nsBaseWidget::CreateChild(
     case WidgetType::Headless:
       widget = nsIWidget::CreateHeadlessWidget();
       break;
-    case WidgetType::Puppet: {
-      // This really only should happen in crashtests that have menupopups.
-      MOZ_ASSERT(aInitData.mWindowType == WindowType::Popup,
-                 "Creating non-popup puppet widget?");
-      widget = nsIWidget::CreatePuppetWidget(nullptr);
+    case WidgetType::Puppet:
+      widget = AllocateChildPuppetWidget(aInitData);
       break;
-    }
   }
 
   if (!widget) {
