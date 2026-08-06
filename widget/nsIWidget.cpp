@@ -536,11 +536,9 @@ already_AddRefed<nsIWidget> nsIWidget::CreateChild(
     case WidgetType::Headless:
       widget = nsIWidget::CreateHeadlessWidget();
       break;
-    case WidgetType::Puppet: {
-      // This really only should happen in crashtests that have menupopups.
-      widget = nsIWidget::CreatePuppetWidget(nullptr);
+    case WidgetType::Puppet:
+      widget = AllocateChildPuppetWidget(aInitData);
       break;
-    }
   }
 
   if (!widget) {
