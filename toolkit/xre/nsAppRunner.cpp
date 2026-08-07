@@ -273,7 +273,7 @@
 #ifdef MOZ_WIDGET_GTK
 #  include "nsAppShell.h"
 #endif
-#ifdef MOZ_ENABLE_DBUS
+#if defined(MOZ_ENABLE_DBUS) && defined(MOZ_WIDGET_GTK)
 #  include "DBusService.h"
 #endif
 
@@ -2213,7 +2213,7 @@ static void DumpHelp() {
   printf("  --headless         Run without a GUI.\n");
 #endif
 
-#if defined(MOZ_ENABLE_DBUS)
+#if defined(MOZ_ENABLE_DBUS) && defined(MOZ_WIDGET_GTK)
   printf(
       "  --dbus-service <launcher>  Run as DBus service for "
       "org.freedesktop.Application and\n"
@@ -4504,7 +4504,7 @@ int XREMain::XRE_mainInit(bool* aExitFlag) {
     return 0;
   }
 
-#ifdef MOZ_ENABLE_DBUS
+#if defined(MOZ_ENABLE_DBUS) && defined(MOZ_WIDGET_GTK)
   const char* dbusServiceLauncher = nullptr;
   ar = CheckArg("dbus-service", &dbusServiceLauncher, CheckArgFlag::None);
   if (ar == ARG_BAD) {
