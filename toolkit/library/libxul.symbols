@@ -1,4 +1,5 @@
 XRE_GetBootstrap
+XRE_GetEmbedLite
 uprofiler_get
 #ifdef XP_IOS
 MainProcessInit
