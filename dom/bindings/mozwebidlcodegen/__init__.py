@@ -38,7 +38,9 @@ class WebIDLPool:
 
     def __init__(self, GeneratorState, *, processes=None):
         if processes is None:
-            processes = DEFAULT_PROCESS_COUNT
+            processes = (
+                1 if os.environ.get("MOZBUILD_NO_FORK") else DEFAULT_PROCESS_COUNT
+            )
 
         # As a special case, don't spawn an extra process if processes=1
         if processes == 1:
