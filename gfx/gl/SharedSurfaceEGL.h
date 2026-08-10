@@ -28,15 +28,19 @@ class SharedSurface_EGLImage final : public SharedSurface {
   mutable Mutex mMutex MOZ_UNANNOTATED;
   EGLSync mSync = nullptr;
   const std::weak_ptr<EglDisplay> mEglDisplay;
+  const GLenum mEmbedderTextureTarget;
 
  public:
   const EGLImage mImage;
+
+  GLenum EmbedderTextureTarget() const { return mEmbedderTextureTarget; }
 
   static UniquePtr<SharedSurface_EGLImage> Create(const SharedSurfaceDesc&);
 
  protected:
   SharedSurface_EGLImage(const SharedSurfaceDesc&,
-                         UniquePtr<MozFramebuffer>&& fb, EGLImage);
+                         UniquePtr<MozFramebuffer>&& fb, EGLImage,
+                         GLenum embedderTextureTarget);
 
   void UpdateProdTexture(const MutexAutoLock& curAutoLock);
 
@@ -51,6 +55,8 @@ class SharedSurface_EGLImage final : public SharedSurface {
 
   virtual void ProducerReadAcquireImpl() override;
   virtual void ProducerReadReleaseImpl() override {};
+
+  virtual bool IsBufferAvailable() const override;
 
   Maybe<layers::SurfaceDescriptor> ToSurfaceDescriptor() override;
 };
