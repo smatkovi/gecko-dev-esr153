@@ -75,11 +75,6 @@
 #include "nsThreadUtils.h"
 #include "ScopedGLHelpers.h"
 
-#ifdef MOZ_WIDGET_QT
-#  include <QGuiApplication>
-#  include <qpa/qplatformnativeinterface.h>
-#endif
-
 #if defined(MOZ_WIDGET_GTK)
 #  include "mozilla/widget/GtkCompositorWidget.h"
 #  if defined(MOZ_WAYLAND)
@@ -100,15 +95,14 @@ namespace gl {
 using namespace mozilla::widget;
 
 #ifdef MOZ_WIDGET_QT
-// Use Qt's EGLDisplay so that Gecko and the Qt platform plugin share the same
-// Wayland connection.
+static EGLDisplay sQtEGLDisplay = EGL_NO_DISPLAY;
+
+void SetQtEGLDisplay(void* aDisplay) {
+  sQtEGLDisplay = static_cast<EGLDisplay>(aDisplay);
+}
+
 static EGLDisplay GetAppDisplay() {
-  auto* const interface = QGuiApplication::platformNativeInterface();
-  if (!interface) {
-    return EGL_NO_DISPLAY;
-  }
-  return static_cast<EGLDisplay>(interface->nativeResourceForIntegration(
-      QByteArrayLiteral("egldisplay")));
+  return sQtEGLDisplay;
 }
 
 static bool IsHybrisDisplay(GLLibraryEGL& lib, const EGLDisplay display) {

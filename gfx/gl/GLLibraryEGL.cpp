@@ -95,6 +95,8 @@ static const char* sEGLExtensionNames[] = {
     "EGL_EXT_image_dma_buf_import_modifiers",
     "EGL_MESA_image_dma_buf_export",
     "EGL_KHR_no_config_context",
+    "EGL_HYBRIS_native_buffer",
+    "EGL_HYBRIS_native_buffer2",
 };
 
 PRLibrary* LoadApitraceLibrary() {

@@ -23,6 +23,7 @@ class CompositorWidget;
 namespace gl {
 
 #ifdef MOZ_WIDGET_QT
+void SetQtEGLDisplay(void* aDisplay);
 bool QtEGLDisplayRequiresSoftwareWebRender();
 #endif
 

@@ -663,20 +663,7 @@ with only_when(toolkit_qt):
                 libs.extend(package.libs)
         return namespace(cflags=cflags, libs=libs)
 
-    @depends(qt_base, pkg_config, pkg_config_env)
-    @checking("for QtGui private header flags", callback=lambda flags: " ".join(flags))
-    def qt_gui_private_cflags(qt_base, pkg_config, env):
-        version = check_cmd_output(
-            pkg_config, "--modversion", "Qt5Gui", env=env
-        ).strip()
-        for flag in qt_base.cflags:
-            if flag.startswith("-I") and flag.rstrip("/").endswith("/QtGui"):
-                include_dir = flag[2:].rstrip("/")
-                return ("-I{}/{}/QtGui".format(include_dir, version),)
-        die("Could not determine the QtGui private header path")
-
     set_config("MOZ_QT_CFLAGS", qt_build_flags.cflags)
-    set_config("MOZ_QT_GUI_PRIVATE_CFLAGS", qt_gui_private_cflags)
     set_config("MOZ_QT_LIBS", qt_build_flags.libs)
     set_config("MOZ_ENABLE_QMSYSTEM2", True, when=qmsystem2)
     set_define("MOZ_ENABLE_QMSYSTEM2", True, when=qmsystem2)

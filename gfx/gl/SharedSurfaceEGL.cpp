@@ -68,15 +68,24 @@ UniquePtr<SharedSurface_EGLImage> SharedSurface_EGLImage::Create(
       egl.fCreateImage(context, LOCAL_EGL_GL_TEXTURE_2D, buffer, nullptr);
   if (!image) return nullptr;
 
-  return AsUnique(new SharedSurface_EGLImage(desc, std::move(fb), image));
+  GLenum embedderTextureTarget = gle->GetPreferredEGLImageTextureTarget();
+#ifdef MOZ_WIDGET_QT
+  embedderTextureTarget = egl.IsHybris() ? LOCAL_GL_TEXTURE_EXTERNAL
+                                         : LOCAL_GL_TEXTURE_2D;
+#endif
+
+  return AsUnique(new SharedSurface_EGLImage(
+      desc, std::move(fb), image, embedderTextureTarget));
 }
 
 SharedSurface_EGLImage::SharedSurface_EGLImage(const SharedSurfaceDesc& desc,
                                                UniquePtr<MozFramebuffer>&& fb,
-                                               const EGLImage image)
+                                               const EGLImage image,
+                                               const GLenum embedderTextureTarget)
     : SharedSurface(desc, std::move(fb)),
       mMutex("SharedSurface_EGLImage mutex"),
       mEglDisplay(GLContextEGL::Cast(desc.gl)->mEgl),
+      mEmbedderTextureTarget(embedderTextureTarget),
       mImage(image) {}
 
 SharedSurface_EGLImage::~SharedSurface_EGLImage() {
@@ -118,6 +127,7 @@ void SharedSurface_EGLImage::ProducerReleaseImpl() {
 }
 
 void SharedSurface_EGLImage::ProducerReadAcquireImpl() {
+  const MutexAutoLock lock(mMutex);
   const auto& gle = GLContextEGL::Cast(mDesc.gl);
   const auto& egl = gle->mEgl;
   // Wait on the fence, because presumably we're going to want to read this
@@ -125,6 +135,19 @@ void SharedSurface_EGLImage::ProducerReadAcquireImpl() {
   if (mSync) {
     egl->fClientWaitSync(mSync, 0, LOCAL_EGL_FOREVER);
   }
+}
+
+bool SharedSurface_EGLImage::IsBufferAvailable() const {
+  const MutexAutoLock lock(mMutex);
+  if (!mSync) {
+    return true;
+  }
+
+  const auto& gle = GLContextEGL::Cast(mDesc.gl);
+  const auto& egl = gle->mEgl;
+  EGLint status = LOCAL_EGL_UNSIGNALED;
+  return egl->fGetSyncAttrib(mSync, LOCAL_EGL_SYNC_STATUS, &status) &&
+         status == LOCAL_EGL_SIGNALED;
 }
 
 Maybe<layers::SurfaceDescriptor> SharedSurface_EGLImage::ToSurfaceDescriptor() {
