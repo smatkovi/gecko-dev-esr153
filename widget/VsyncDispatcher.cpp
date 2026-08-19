@@ -6,6 +6,7 @@
 #include "VsyncDispatcher.h"
 #include "VsyncSource.h"
 #include "gfxPlatform.h"
+#include "mozilla/gfx/Logging.h"
 #include "mozilla/layers/Compositor.h"
 #include "mozilla/layers/CompositorBridgeParent.h"
 #include "mozilla/layers/CompositorThread.h"
@@ -192,6 +193,7 @@ void VsyncDispatcher::NotifyMainThreadObservers(VsyncEvent aEvent) {
 
 void VsyncDispatcher::AddVsyncObserver(VsyncObserver* aVsyncObserver) {
   MOZ_ASSERT(aVsyncObserver);
+  gfxCriticalNote << "EL-Y1 VD::AddObs";
   {  // scope lock - called on PBackground thread or main thread
     auto state = mState.Lock();
     if (!state->mObservers.Contains(aVsyncObserver)) {
@@ -204,6 +206,7 @@ void VsyncDispatcher::AddVsyncObserver(VsyncObserver* aVsyncObserver) {
 
 void VsyncDispatcher::RemoveVsyncObserver(VsyncObserver* aVsyncObserver) {
   MOZ_ASSERT(aVsyncObserver);
+  gfxCriticalNote << "EL-Z3 VD::RemoveObs";
   {  // scope lock - called on PBackground thread or main thread
     auto state = mState.Lock();
     state->mObservers.RemoveElement(aVsyncObserver);
@@ -251,6 +254,7 @@ void VsyncDispatcher::UpdateVsyncStatus() {
   // Call Add/RemoveVsyncDispatcher outside the lock, because it can re-enter
   // into VsyncDispatcher::NotifyVsync.
   if (needVsync && !wasObservingVsync) {
+    gfxCriticalNote << "EL-Y2 VD observes source";
     vsyncSource->AddVsyncDispatcher(this);
   } else if (!needVsync && wasObservingVsync) {
     vsyncSource->RemoveVsyncDispatcher(this);

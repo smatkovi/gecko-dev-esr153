@@ -8,6 +8,7 @@
 #include "mozilla/VsyncDispatcher.h"
 #include "MainThreadUtils.h"
 #include "gfxPlatform.h"
+#include "mozilla/gfx/Logging.h"
 
 #ifdef MOZ_WAYLAND
 #  include "WaylandVsyncSource.h"
@@ -37,6 +38,7 @@ void VsyncSource::NotifyVsync(const TimeStamp& aVsyncTimestamp,
 
   // Notify our listeners, outside of the lock.
   const VsyncEvent event(vsyncId, aVsyncTimestamp, aOutputTimestamp);
+  { static bool once=false; if(!once){once=true; gfxCriticalNote << "EL-Z2 source-tick disp=" << dispatchers.Length(); } }
   for (const auto& dispatcher : dispatchers) {
     dispatcher.mDispatcher->NotifyVsync(event);
   }
@@ -44,6 +46,7 @@ void VsyncSource::NotifyVsync(const TimeStamp& aVsyncTimestamp,
 
 void VsyncSource::AddVsyncDispatcher(VsyncDispatcher* aVsyncDispatcher) {
   MOZ_ASSERT(aVsyncDispatcher);
+  gfxCriticalNote << "EL-Y3 VS::AddDispatcher";
   {
     auto state = mState.Lock();
 
@@ -116,6 +119,7 @@ void VsyncSource::UpdateVsyncStatus() {
     auto state = mState.Lock();
     enableVsync = !state->mDispatchers.IsEmpty();
   }
+  gfxCriticalNote << "EL-Y4 VS enable=" << int(enableVsync);
 
   if (enableVsync) {
     EnableVsync();

@@ -195,6 +195,7 @@ RenderedFrameId RendererOGL::UpdateAndRender(
       return RenderedFrameId();
     }
     needPostRenderCall = true;
+    gfxCriticalNote << "EL-A PreRender ok";
 
     // XXX set clear color if MOZ_WIDGET_ANDROID is defined.
 
@@ -204,7 +205,9 @@ RenderedFrameId RendererOGL::UpdateAndRender(
       }
     }
 
+    gfxCriticalNote << "EL-B call BeginFrame";
     if (!mCompositor->BeginFrame()) {
+      gfxCriticalNote << "EL-C BeginFrame false";
       beginFrame = false;
     }
 

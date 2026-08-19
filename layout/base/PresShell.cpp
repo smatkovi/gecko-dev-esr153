@@ -1640,6 +1640,7 @@ void PresShell::InitPaintSuppressionTimer() {
 }
 
 nsresult PresShell::Initialize() {
+  { static bool o8=false; if(!o8){o8=true; gfxCriticalNote << "EL-Z8 PresShell::Initialize#1"; } }
   if (mIsDestroying) {
     return NS_OK;
   }
@@ -4261,6 +4262,7 @@ void PresShell::CancelPaintSuppressionTimer() {
 }
 
 void PresShell::UnsuppressPainting() {
+  { static bool o9=false; if(!o9){o9=true; gfxCriticalNote << "EL-Z9 UnsuppressPainting#1"; } }
   CancelPaintSuppressionTimer();
 
   if (mIsDocumentGone || !mPaintingSuppressed) {
