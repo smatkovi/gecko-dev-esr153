@@ -532,6 +532,11 @@ bool CompositorBridgeParent::ResumeComposition() {
   MOZ_ASSERT(CompositorThreadHolder::IsInCompositorThread(),
              "ResumeComposition() can only be called on the compositor thread");
 
+  // EmbedLite: beim Seitenwechsel koennen Widget/WrBridge bereits
+  // abgeraeumt sein, waehrend ein Resume noch unterwegs ist.
+  if (!mWidget || !mWrBridge) {
+    return false;
+  }
   bool resumed = mWidget->OnResumeComposition();
   resumed = resumed && mWrBridge->Resume();
 
