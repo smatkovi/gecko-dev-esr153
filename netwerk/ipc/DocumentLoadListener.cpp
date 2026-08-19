@@ -1832,6 +1832,15 @@ static bool ContextCanProcessSwitch(CanonicalBrowsingContext* aBrowsingContext,
     return false;
   }
 
+  // EmbedLite/single-process embedding: without remote tabs there is no
+  // content process to switch into - a switch attempt can only fail
+  // (ChangeRemoteness has no <browser> abstraction to work with).
+  if (!aBrowsingContext->UseRemoteTabs()) {
+    MOZ_LOG(gProcessIsolationLog, LogLevel::Warning,
+            ("Process Switch Abort: remote tabs disabled"));
+    return false;
+  }
+
   // If we're switching into a new tab, we can skip the remaining checks, as
   // we're not actually changing the process of aBrowsingContext, so whether or
   // not it is allowed to process switch isn't relevant.

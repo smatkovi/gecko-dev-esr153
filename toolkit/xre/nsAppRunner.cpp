@@ -573,6 +573,12 @@ static bool gBrowserTabsRemoteAutostartInitialized = false;
 namespace mozilla {
 
 bool BrowserTabsRemoteAutostart() {
+#if defined(MOZ_EMBEDLITE)
+  // EmbedLite ist per Definition single-process: nie Remote-Tabs autostarten.
+  // (Verhindert Process-Switch-Versuche und den CanLoadInParentProcess-Block.)
+  return false;
+#endif
+
   if (gBrowserTabsRemoteAutostartInitialized) {
     return gBrowserTabsRemoteAutostart;
   }
