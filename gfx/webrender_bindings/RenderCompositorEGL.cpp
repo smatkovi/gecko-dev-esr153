@@ -111,12 +111,15 @@ RenderCompositorEGL::~RenderCompositorEGL() {
 
 #ifdef MOZ_EMBEDLITE
 bool RenderCompositorEGL::EnsureEmbedLiteOffscreenTarget() {
+  gfxCriticalNote << "EL-E ensure entry";
   MOZ_ASSERT(mUseEmbedLiteOffscreen);
   const auto size = GetBufferSize().ToUnknownSize();
+  gfxCriticalNote << "EL-Ensure size " << size.width << "x" << size.height;
   if (size.IsEmpty()) {
     return false;
   }
   if (!gl()->MakeCurrent()) {
+    gfxCriticalNote << "EL-Ensure MakeCurrent failed";
     return false;
   }
   if (gl()->Screen()) {
@@ -126,6 +129,7 @@ bool RenderCompositorEGL::EnsureEmbedLiteOffscreenTarget() {
     return gl()->ResizeScreenBuffer(size);
   }
   if (!gl()->CreateOffscreenScreenBuffer(size)) {
+    gfxCriticalNote << "EL-Ensure CreateOffscreenScreenBuffer failed";
     return false;
   }
   if (gl()->GetContextType() == gl::GLContextType::EGL) {
@@ -134,6 +138,7 @@ bool RenderCompositorEGL::EnsureEmbedLiteOffscreenTarget() {
       gl()->Screen()->Morph(std::move(factory));
       return true;
     }
+    gfxCriticalNote << "EL-W factory FAILED (EGL)";
     return false;
   }
   return false;
@@ -141,6 +146,7 @@ bool RenderCompositorEGL::EnsureEmbedLiteOffscreenTarget() {
 #endif
 
 bool RenderCompositorEGL::BeginFrame() {
+  gfxCriticalNote << "EL-D BF entry off=" << int(mUseEmbedLiteOffscreen);
 #ifdef MOZ_EMBEDLITE
   if (mUseEmbedLiteOffscreen && !EnsureEmbedLiteOffscreenTarget()) {
     gfxCriticalNote << "Failed to prepare EmbedLite offscreen target.";
@@ -253,7 +259,9 @@ bool RenderCompositorEGL::Resume() {
 #ifdef MOZ_EMBEDLITE
   if (mUseEmbedLiteOffscreen) {
     DestroyEGLSurface();
-    return EnsureEmbedLiteOffscreenTarget();
+    const bool elOk = EnsureEmbedLiteOffscreenTarget();
+    gfxCriticalNote << "EL-Resume ensure=" << elOk;
+    return elOk;
   }
 #endif
   if (kIsAndroid) {

@@ -7,6 +7,7 @@
 #include "SoftwareVsyncSource.h"
 #include "base/task.h"
 #include "gfxPlatform.h"
+#include "mozilla/gfx/Logging.h"
 #include "nsThreadUtils.h"
 
 namespace mozilla::gfx {
@@ -36,6 +37,7 @@ void SoftwareVsyncSource::EnableVsync() {
       return;
     }
     mVsyncEnabled = true;
+    gfxCriticalNote << "EL-Y5 SVS enabled(main)";
 
     mVsyncThread->message_loop()->PostTask(
         NewRunnableMethod("SoftwareVsyncSource::EnableVsync", this,
@@ -43,6 +45,7 @@ void SoftwareVsyncSource::EnableVsync() {
     return;
   }
 
+  gfxCriticalNote << "EL-Y6 SVS first tick";
   MOZ_ASSERT(IsInSoftwareVsyncThread());
   TimeStamp vsyncTime = TimeStamp::Now();
   TimeStamp outputTime = vsyncTime + GetVsyncRate();

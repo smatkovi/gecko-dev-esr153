@@ -546,6 +546,13 @@ void GLContextEGL::OnMarkDestroyed() {
 }
 
 GLContextEGL::~GLContextEGL() {
+  // EmbedLite/0072: Screen (SwapChain/SharedSurfaces) VOR MarkDestroyed abbauen -
+  // ProducerRelease braucht lebende GL-Symbols und die EGL-vtable.
+  if (mScreen) {
+    MakeCurrent();
+    mScreen = nullptr;
+  }
+
   MarkDestroyed();
 
   // Wrapped context should not destroy eglContext/Surface

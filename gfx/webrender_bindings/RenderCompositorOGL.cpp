@@ -104,6 +104,7 @@ bool RenderCompositorOGL::BeginFrame() {
               gl::SurfaceFactory_EGLImage::Create(*mGL)) {
         mGL->Screen()->Morph(std::move(factory));
       } else {
+        gfxCriticalNote << "EL-W factory FAILED (OGL)";
         return false;
       }
     } else {

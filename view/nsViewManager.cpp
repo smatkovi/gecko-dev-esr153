@@ -359,6 +359,10 @@ void nsViewManager::ProcessPendingUpdatesRecurse(
 }
 
 void nsViewManager::ProcessPendingUpdatesPaint(nsIWidget* aWidget) {
+  { static int last=-1; int np=(int)aWidget->NeedsPaint();
+    if(np!=last){ last=np; auto b=aWidget->GetBounds();
+      gfxCriticalNote << "EL-Z14 needsPaint=" << np << " vis=" << int(aWidget->IsVisible())
+                      << " bounds=" << b.width << "x" << b.height; } }
   if (aWidget->NeedsPaint()) {
     // If an ancestor widget was hidden and then shown, we could
     // have a delayed resize to handle.
@@ -384,6 +388,7 @@ void nsViewManager::ProcessPendingUpdatesPaint(nsIWidget* aWidget) {
 
     if (previousListener && previousListener != view &&
         view->IsPrimaryFramePaintSuppressed()) {
+      { static bool b=false; if(!b){b=true; gfxCriticalNote << "EL-Z15 blocked: primary-frame-suppressed"; } }
       return;
     }
 
@@ -396,6 +401,7 @@ void nsViewManager::ProcessPendingUpdatesPaint(nsIWidget* aWidget) {
       }
 #endif
 
+      { static bool c=false; if(!c){c=true; gfxCriticalNote << "EL-Z16 PaintAndRequestComposite!"; } }
       presShell->PaintAndRequestComposite(view, PaintFlags::None);
       view->SetForcedRepaint(false);
 
