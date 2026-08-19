@@ -1272,9 +1272,11 @@ mozilla::ipc::IPCResult WebRenderBridgeParent::RecvSetDisplayList(
   }
 
   LOG("WebRenderBridgeParent::RecvSetDisplayList() PipelineId %" PRIx64
-      " Id %" PRIx64 " root %d",
+      " Id %" PRIx64 " root %d dlBytes %zu url %s",
       wr::AsUint64(mPipelineId), wr::AsUint64(mApi->GetId()),
-      IsRootWebRenderBridgeParent());
+      IsRootWebRenderBridgeParent(),
+      aDisplayList.mDLItems ? size_t(aDisplayList.mDLItems->mLen) : size_t(0),
+      PromiseFlatCString(aTxnURL).get());
 
   if (!IsRootWebRenderBridgeParent()) {
     CrashReporter::RecordAnnotationNSCString(CrashReporter::Annotation::URL,
