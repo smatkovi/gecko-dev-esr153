@@ -164,11 +164,14 @@ bool RenderCompositorOGL::RequestFullRender() { return false; }
 
 bool RenderCompositorOGL::UsePartialPresent() {
 #ifdef MOZ_EMBEDLITE
-  if (mWidget && mWidget->IsEmbedLiteOffscreen()) {
-    return false;
-  }
-#endif
+  // Embedding rendert in die SharedSurface-Rotation ohne echte
+  // Swapchain-Age-Semantik - Partial Present frisst dort Pixel
+  // (wachsende schwarze Loecher). Hart aus, unabhaengig vom Widget:
+  // der Nachfolger-Renderer haelt nicht immer das EmbedLite-Widget.
+  return false;
+#else
   return gfx::gfxVars::WebRenderMaxPartialPresentRects() > 0;
+#endif
 }
 
 bool RenderCompositorOGL::ShouldDrawPreviousPartialPresentRegions() {
@@ -177,15 +180,13 @@ bool RenderCompositorOGL::ShouldDrawPreviousPartialPresentRegions() {
 
 size_t RenderCompositorOGL::GetBufferAge() const {
 #ifdef MOZ_EMBEDLITE
-  if (mWidget && mWidget->IsEmbedLiteOffscreen()) {
-    return 0;
-  }
-#endif
-  if (!StaticPrefs::
-          gfx_webrender_allow_partial_present_buffer_age_AtStartup()) {
+  return 0;  // Alter unbekannt -> WebRender rendert voll.
+#else
+  if (!StaticPrefs::gfx_webrender_allow_partial_present_buffer_age_AtStartup()) {
     return 0;
   }
   return gl()->GetBufferAge();
+#endif
 }
 
 }  // namespace mozilla::wr

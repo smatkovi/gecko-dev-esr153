@@ -379,11 +379,14 @@ LayoutDeviceIntSize RenderCompositorEGL::GetBufferSize() {
 
 bool RenderCompositorEGL::UsePartialPresent() {
 #ifdef MOZ_EMBEDLITE
-  if (mUseEmbedLiteOffscreen) {
-    return false;
-  }
-#endif
+  // Embedding rendert in die SharedSurface-Rotation ohne echte
+  // Swapchain-Age-Semantik - Partial Present frisst dort Pixel
+  // (wachsende schwarze Loecher). Hart aus, unabhaengig vom Widget:
+  // der Nachfolger-Renderer haelt nicht immer das EmbedLite-Widget.
+  return false;
+#else
   return gfx::gfxVars::WebRenderMaxPartialPresentRects() > 0;
+#endif
 }
 
 bool RenderCompositorEGL::RequestFullRender() { return false; }
@@ -398,15 +401,13 @@ bool RenderCompositorEGL::ShouldDrawPreviousPartialPresentRegions() {
 
 size_t RenderCompositorEGL::GetBufferAge() const {
 #ifdef MOZ_EMBEDLITE
-  if (mUseEmbedLiteOffscreen) {
-    return 0;
-  }
-#endif
-  if (!StaticPrefs::
-          gfx_webrender_allow_partial_present_buffer_age_AtStartup()) {
+  return 0;  // Alter unbekannt -> WebRender rendert voll.
+#else
+  if (!StaticPrefs::gfx_webrender_allow_partial_present_buffer_age_AtStartup()) {
     return 0;
   }
   return gl()->GetBufferAge();
+#endif
 }
 
 void RenderCompositorEGL::SetBufferDamageRegion(const wr::DeviceIntRect* aRects,
