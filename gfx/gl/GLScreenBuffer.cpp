@@ -178,7 +178,8 @@ bool GLScreenBuffer::Resize(const gfx::IntSize& size) {
 
   mPresenter = nullptr;
   mSize = size;
-  mPresenter = mSwapChain->Acquire(size, gfx::ColorSpace2::SRGB);
+  mPresenter = mSwapChain->Acquire(size, gfx::ColorSpace2::SRGB,
+                                   gfx::TransferFunction::SRGB);
   return bool(mPresenter);
 }
 
