@@ -30,7 +30,7 @@ use euclid::default::Size2D;
 use euclid::{Scale, SideOffsets2D};
 use parking_lot::RwLock;
 use servo_arc::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering};
 use std::{cmp, fmt};
 use style_traits::{CSSPixel, DevicePixel};
 
@@ -447,6 +447,16 @@ impl Device {
     }
 
     /// Returns safe area insets
+    /// Record consumed safe-area inset env vars.
+    pub fn note_safe_area_inset_usage(&self, usage: u8) {
+        self.safe_area_inset_usage.fetch_or(usage, Ordering::Relaxed);
+    }
+
+    /// Safe-area inset usage bits since last cache rebuild.
+    pub fn safe_area_inset_usage(&self) -> u8 {
+        self.safe_area_inset_usage.load(Ordering::Relaxed)
+    }
+
     pub fn safe_area_insets(&self) -> SideOffsets2D<f32, CSSPixel> {
         let pc = match self.pres_context() {
             Some(pc) => pc,

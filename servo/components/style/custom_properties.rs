@@ -2638,6 +2638,8 @@ pub struct SubstitutionResult<'a> {
     pub css: Cow<'a, str>,
     /// Regions in the `css` string that are attr()-tainted, if any.
     pub attr_taint: AttrTaint,
+    /// Safe-area inset variables consumed during substitution.
+    pub safe_area_inset_usage: u8,
 }
 
 fn compute_value(
@@ -2969,5 +2971,6 @@ pub fn substitute<'a>(
     Ok(SubstitutionResult {
         css: v.css,
         attr_taint,
+        safe_area_inset_usage: v.safe_area_inset_usage,
     })
 }

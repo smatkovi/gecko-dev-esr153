@@ -14,7 +14,7 @@ use crate::values::computed::Length;
 use parking_lot::RwLock;
 use servo_arc::Arc;
 use std::mem;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU8, AtomicBool, AtomicU32, Ordering};
 
 #[cfg(feature = "gecko")]
 use crate::device::gecko::ExtraDeviceData;
@@ -62,6 +62,8 @@ pub struct Device {
     /// Whether any styles computed in the document relied on the root font-size
     /// by using rem units.
     used_root_font_size: AtomicBool,
+    /// Safe-area inset env vars consumed while resolving style.
+    safe_area_inset_usage: AtomicU8,
     /// Whether any styles computed in the document relied on the root line-height
     /// by using rlh units.
     used_root_line_height: AtomicBool,

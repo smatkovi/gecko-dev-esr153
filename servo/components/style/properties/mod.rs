@@ -1500,7 +1500,7 @@ impl UnparsedValue {
             }
         }
 
-        let SubstitutionResult { css, attr_taint } = match custom_properties::substitute(
+        let SubstitutionResult { css, attr_taint, safe_area_inset_usage } = match custom_properties::substitute(
             &self.variable_value,
             substitution_functions,
             stylist,
