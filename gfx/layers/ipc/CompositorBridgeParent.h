@@ -237,8 +237,7 @@ class CompositorBridgeParentBase : public PCompositorBridgeParent,
 MOZ_MAKE_ENUM_CLASS_BITWISE_OPERATORS(
     CompositorBridgeParentBase::TransformsToSkip)
 
-class CompositorBridgeParent : public CompositorBridgeParentBase,
-                               public CompositorController {
+class CompositorBridgeParent : public CompositorBridgeParentBase {
   friend class CompositorThreadHolder;
   friend class InProcessCompositorSession;
   friend class gfx::GPUProcessManager;
