@@ -152,7 +152,7 @@ void CanvasContext::Configure(const dom::GPUCanvasConfiguration& aConfig,
   }
 #elif defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
   // Other Linux widget toolkits do not build the GTK DMA-BUF backend.
-  mUseExternalTextureInSwapChain = false;
+  mUseSharedTextureInSwapChain = false;
 #endif
 
   mCurrentTexture = aConfig.mDevice->InitSwapChain(
