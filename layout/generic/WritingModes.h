@@ -483,7 +483,7 @@ class WritingMode {
   }
 
   inline StyleWritingMode ToStyleWritingMode() const {
-    return StyleWritingMode(GetBits());
+    return StyleWritingMode{GetBits()};
   }
 
   /**
