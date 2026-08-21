@@ -420,7 +420,7 @@ impl StyleFeaturePlain {
             Some(ctx.inherited_custom_properties().clone()),
             None,
         );
-        let custom_properties::SubstitutionResult { css, attr_taint } =
+        let custom_properties::SubstitutionResult { css, attr_taint, safe_area_inset_usage: _ } =
             match custom_properties::substitute(
                 &value,
                 &substitution_functions,
@@ -890,7 +890,7 @@ impl QueryCondition {
             Some(context.inherited_custom_properties().clone()),
             None,
         );
-        let custom_properties::SubstitutionResult { css, attr_taint } =
+        let custom_properties::SubstitutionResult { css, attr_taint, safe_area_inset_usage: _ } =
             match custom_properties::substitute(
                 &value,
                 &substitution_functions,

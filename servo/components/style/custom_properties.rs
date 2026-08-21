@@ -790,6 +790,7 @@ struct SubstitutionFunctionReference {
     prev_token_type: TokenSerializationType,
     next_token_type: TokenSerializationType,
     substitution_kind: SubstitutionFunctionKind,
+    safe_area_inset_usage: u8,
 }
 
 /// A struct holding information about the external references to that a custom
@@ -838,6 +839,7 @@ impl VariableValue {
         last_token_type: TokenSerializationType,
     ) -> Self {
         Self {
+            safe_area_inset_usage: 0,
             css,
             url_data: url_data.clone(),
             first_token_type,
