@@ -12603,14 +12603,14 @@
 #ifdef MOZ_EMBEDLITE
   # Enable the gecko-camera based decoder by default.
 - name: media.gecko-camera-codec.enabled
-    type: RelaxedAtomicBool
-    value: true
-    mirror: always
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
 
 - name: media.gecko-camera-codec.preferred
-    type: RelaxedAtomicBool
-    value: true
-    mirror: always
+  type: RelaxedAtomicBool
+  value: true
+  mirror: always
 #endif  # MOZ_EMBEDLITE
 
 # Now we will completely disable the ability to perform audio decoding outside
