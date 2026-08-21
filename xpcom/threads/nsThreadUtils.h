@@ -999,8 +999,10 @@ struct OtherParameterStorage<const T&&> {
   // This is good advice regardless of the types you're handling. Making it a
   // dependent type so that the check only happens when this specialization is
   // instantiated.
+#ifndef RUST_BINDGEN
   static_assert(!std::is_same_v<std::void_t<T>, void>,
                 "please use a lambda function");
+#endif
 };
 
 // default impl.

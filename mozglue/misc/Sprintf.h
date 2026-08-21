@@ -48,8 +48,8 @@ struct MOZ_STACK_CLASS SprintfAppend final : public mozilla::PrintfTarget {
 }  // namespace mozilla
 #  endif  // SPRINTF_H_USES_VSNPRINTF
 
-MOZ_FORMAT_PRINTF(3, 0)
 [[maybe_unused]]
+MOZ_FORMAT_PRINTF(3, 0)
 static int VsprintfBuf(char* buffer, size_t bufsize, const char* format,
                        va_list args) {
   MOZ_ASSERT(format != buffer);
@@ -66,8 +66,8 @@ static int VsprintfBuf(char* buffer, size_t bufsize, const char* format,
 #  endif
 }
 
-MOZ_FORMAT_PRINTF(3, 4)
 [[maybe_unused]]
+MOZ_FORMAT_PRINTF(3, 4)
 static int SprintfBuf(char* buffer, size_t bufsize, const char* format, ...) {
   va_list args;
   va_start(args, format);
