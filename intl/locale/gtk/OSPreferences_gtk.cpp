@@ -92,6 +92,7 @@ static int HourCycle() {
   }
 #endif
 
+#ifdef MOZ_ENABLE_GSETTINGS
   nsCOMPtr<nsIGSettingsService> gsettings =
       do_GetService(NS_GSETTINGSSERVICE_CONTRACTID);
   if (!gsettings) {
@@ -113,6 +114,7 @@ static int HourCycle() {
   if (result == "24h") {
     return 24;
   }
+#endif
   return 0;
 }
 
