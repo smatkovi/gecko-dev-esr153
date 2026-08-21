@@ -2730,7 +2730,7 @@ void gfxPlatform::InitWebRenderConfig() {
 
 #if defined(MOZ_WIDGET_ANDROID) || defined(MOZ_WIDGET_GTK) || \
     defined(MOZ_EMBEDLITE)
-  if (StaticPrefs::gfx_webrender_software_opengl()) {
+  if (StaticPrefs::gfx_webrender_software_opengl_AtStartup()) {
     gfxVars::SetAllowSoftwareWebRenderOGL(true);
   }
 #endif
