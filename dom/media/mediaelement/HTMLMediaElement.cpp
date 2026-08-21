@@ -6155,7 +6155,7 @@ void HTMLMediaElement::MetadataLoaded(const MediaInfo* aInfo,
   mLoadedDataFired = false;
   ChangeReadyState(HAVE_METADATA);
   if (HasAttr(kNameSpaceID_None, nsGkAtoms::autoplay)) {
-    UpdatePreloadAction();
+    UpdatePreloadAction(JSCallingLocation::Get());
   }
 
   // Add output tracks synchronously now to be sure they're available in
