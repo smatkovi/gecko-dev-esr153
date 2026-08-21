@@ -172,7 +172,6 @@ class PDMInitializer final {
 #ifdef MOZ_ENABLE_WEBRTC_GECKOCAMERA
     GeckoCameraDecoderModule::Init();
 #endif
-    RemoteDecoderManagerChild::Init();
   }
 
   static void InitDefaultPDMs() {
