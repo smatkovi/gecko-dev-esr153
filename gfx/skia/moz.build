@@ -655,7 +655,6 @@ LOCAL_INCLUDES += [
     "/gfx/harfbuzz/src",
 ]
 
-if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'android'):
 if CONFIG['MOZ_WIDGET_TOOLKIT'] in ('gtk', 'android', 'qt'):
     LOCAL_INCLUDES += [
         "/gfx/cairo/cairo/src",
