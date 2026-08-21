@@ -77,6 +77,12 @@ class nsBaseAppShell : public nsIAppShell,
    */
   virtual bool ProcessNextNativeEvent(bool mayWait) = 0;
 
+  // EL-AS: Liefert false auf Threads ohne native Event-Quelle (z.B.
+  // EmbedLiteSubThread ohne Qt-Dispatcher). Dann verzichtet
+  // OnProcessNextEvent auf Native-Verschraenkung und DummyEvent und
+  // laesst nsThread ereignisbasiert auf seiner Condvar blocken.
+  virtual bool CanBlockNativeEvents() { return true; }
+
   int32_t mSuspendNativeCount;
   uint32_t mEventloopNestingLevel;
 

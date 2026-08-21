@@ -225,6 +225,12 @@ nsBaseAppShell::OnProcessNextEvent(nsIThreadInternal* thr, bool mayWait) {
       OnDispatchedEvent();  // in case we blocked it earlier
   }
 
+  // EL-AS: Ohne native Event-Quelle keine Verschraenkung - kein Spin,
+  // kein DummyEvent; nsThread blockt ereignisbasiert und jedes Dispatch
+  // weckt ihn ueber die Thread-Condvar.
+  if (!CanBlockNativeEvents()) {
+    return NS_OK;
+  }
   PRIntervalTime start = PR_IntervalNow();
   PRIntervalTime limit = THREAD_EVENT_STARVATION_LIMIT;
 
