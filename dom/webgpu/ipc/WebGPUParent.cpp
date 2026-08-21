@@ -104,7 +104,7 @@ extern void* wgpu_server_get_shared_texture_handle(WGPUWebGPUParentPtr aParent,
 }
 #endif
 
-#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
+#ifdef MOZ_WIDGET_GTK
 extern int32_t wgpu_server_get_dma_buf_fd(WGPUWebGPUParentPtr aParent,
                                           WGPUTextureId aId) {
   auto* parent = static_cast<WebGPUParent*>(aParent);
@@ -130,7 +130,7 @@ extern int32_t wgpu_server_get_dma_buf_fd(WGPUWebGPUParentPtr aParent,
 }
 #endif
 
-#if defined(XP_LINUX) && !defined(MOZ_WIDGET_ANDROID)
+#ifdef MOZ_WIDGET_GTK
 extern const WGPUVkImageHandle* wgpu_server_get_vk_image_handle(
     WGPUWebGPUParentPtr aParent, WGPUTextureId aId) {
   auto* parent = static_cast<WebGPUParent*>(aParent);
