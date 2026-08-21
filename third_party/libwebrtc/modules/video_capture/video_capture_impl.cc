@@ -278,7 +278,7 @@ int32_t VideoCaptureImpl::IncomingVideoBuffer(
       VideoFrame::Builder()
           .set_video_frame_buffer(buffer)
           .set_rtp_timestamp(0)
-          .set_timestamp_ms(rtc::TimeMillis())
+          .set_timestamp_ms(webrtc::TimeMillis())
           .set_rotation(_rotateFrame)
           .build();
   capture_frame.set_ntp_time_ms(capture_time);

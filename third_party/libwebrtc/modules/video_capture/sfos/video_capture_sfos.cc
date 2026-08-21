@@ -20,7 +20,7 @@ namespace videocapturemodule {
 
 webrtc::scoped_refptr<VideoCaptureModule> VideoCaptureImpl::Create(
     const char* device_unique_id_utf8) {
-  auto implementation = rtc::make_ref_counted<VideoCaptureModuleSFOS>();
+  auto implementation = webrtc::make_ref_counted<VideoCaptureModuleSFOS>();
   if (implementation->Init(device_unique_id_utf8) != 0) {
     return nullptr;
   }

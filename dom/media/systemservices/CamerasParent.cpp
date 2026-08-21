@@ -886,15 +886,15 @@ VideoEngine* CamerasParent::EnsureInitialized(CaptureEngine aEngine) {
     return nullptr;
   }
 
-  if (VideoEngine* engine = mEngines->ElementAt(aEngine); engine) {
 #ifdef MOZ_EMBEDLITE
-  if (capEngine != CameraEngine) {
-    LOG("Capture engine %d is not supported by EmbedLite", aEngine);
+  if (aEngine != CaptureEngine::CameraEngine) {
+    LOG("Capture engine {} is not supported by EmbedLite",
+        static_cast<int>(aEngine));
     return nullptr;
   }
 #endif
 
-  if (VideoEngine* engine = mEngines->ElementAt(capEngine); engine) {
+  if (VideoEngine* engine = mEngines->ElementAt(aEngine); engine) {
     return engine;
   }
 
