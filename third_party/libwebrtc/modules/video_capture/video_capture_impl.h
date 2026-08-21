@@ -90,7 +90,7 @@ class RTC_EXPORT VideoCaptureImpl : public VideoCaptureModule {
   ~VideoCaptureImpl() override;
 
   int32_t IncomingVideoBuffer(
-      const rtc::scoped_refptr<VideoFrameBuffer>& buffer,
+      const webrtc::scoped_refptr<VideoFrameBuffer>& buffer,
       int64_t capture_time);
 
   // Calls to the public API must happen on a single thread.

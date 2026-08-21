@@ -264,7 +264,7 @@ int32_t VideoCaptureImpl::IncomingFrame(uint8_t* videoFrame,
 }
 
 int32_t VideoCaptureImpl::IncomingVideoBuffer(
-    const rtc::scoped_refptr<VideoFrameBuffer>& buffer,
+    const webrtc::scoped_refptr<VideoFrameBuffer>& buffer,
     int64_t capture_time) {
   RTC_CHECK_RUNS_SERIALIZED(&capture_checker_);
   MutexLock lock(&api_lock_);

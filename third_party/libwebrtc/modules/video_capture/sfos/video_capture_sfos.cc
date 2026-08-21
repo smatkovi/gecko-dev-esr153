@@ -18,7 +18,7 @@
 namespace webrtc {
 namespace videocapturemodule {
 
-rtc::scoped_refptr<VideoCaptureModule> VideoCaptureImpl::Create(
+webrtc::scoped_refptr<VideoCaptureModule> VideoCaptureImpl::Create(
     const char* device_unique_id_utf8) {
   auto implementation = rtc::make_ref_counted<VideoCaptureModuleSFOS>();
   if (implementation->Init(device_unique_id_utf8) != 0) {
@@ -27,7 +27,7 @@ rtc::scoped_refptr<VideoCaptureModule> VideoCaptureImpl::Create(
   return implementation;
 }
 
-rtc::scoped_refptr<VideoCaptureModule> VideoCaptureImpl::Create(
+webrtc::scoped_refptr<VideoCaptureModule> VideoCaptureImpl::Create(
     VideoCaptureOptions* /* options */,
     const char* device_unique_id_utf8) {
   return Create(device_unique_id_utf8);
@@ -162,7 +162,7 @@ void VideoCaptureModuleSFOS::onCameraFrame(
   }
 
   const uint64_t timestamp_us = frame->timestampUs;
-  rtc::scoped_refptr<I420BufferInterface> buffer;
+  webrtc::scoped_refptr<I420BufferInterface> buffer;
   if (frame->chromaStep == 1) {
     buffer = WrapI420Buffer(
         frame->width, frame->height, frame->y, frame->yStride, frame->cb,
