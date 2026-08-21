@@ -790,7 +790,6 @@ struct SubstitutionFunctionReference {
     prev_token_type: TokenSerializationType,
     next_token_type: TokenSerializationType,
     substitution_kind: SubstitutionFunctionKind,
-    safe_area_inset_usage: u8,
 }
 
 /// A struct holding information about the external references to that a custom
@@ -2564,7 +2563,6 @@ fn substitute_references_if_needed_and_apply(
                 substitution.last_token_type,
             )));
             value.attr_tainted |= substitution.attr_tainted;
-            value.safe_area_inset_usage |= substitution.safe_area_inset_usage;
             substitution_functions.insert_attr(name, value);
         },
         SubstitutionFunctionKind::Env => unreachable!("Kind cannot be env."),
@@ -2577,6 +2575,7 @@ struct Substitution<'a> {
     first_token_type: TokenSerializationType,
     last_token_type: TokenSerializationType,
     attr_tainted: bool,
+    safe_area_inset_usage: u8,
 }
 
 impl<'a> Substitution<'a> {
@@ -2604,7 +2603,6 @@ impl<'a> Substitution<'a> {
                 self.last_token_type,
             )));
             value.attr_tainted |= self.attr_tainted;
-            value.safe_area_inset_usage |= self.safe_area_inset_usage;
             return Ok(value);
         }
         let taint = if self.attr_tainted {
@@ -2618,7 +2616,6 @@ impl<'a> Substitution<'a> {
         };
         let mut v = compute_value(&self.css, url_data, registration, computed_context, taint)?;
         v.attr_tainted |= self.attr_tainted;
-        v.safe_area_inset_usage |= self.safe_area_inset_usage;
         Ok(v)
     }
 
