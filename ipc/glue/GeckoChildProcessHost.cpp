@@ -1164,7 +1164,7 @@ void BaseProcessLauncher::MapChildLogging() {
   }
 }
 
-#if defined(MOZ_WIDGET_GTK)
+#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
 Result<Ok, LaunchError> BaseProcessLauncher::DoFinishLaunch() {
   // We're in the parent and the child was launched. Clean up any FDs which were
   // transferred to the child in the parent as soon as possible, which will
@@ -1174,6 +1174,7 @@ Result<Ok, LaunchError> BaseProcessLauncher::DoFinishLaunch() {
 
   return Ok();
 }
+#endif
 
 #if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
 Result<Ok, LaunchError> LinuxProcessLauncher::DoSetup() {
