@@ -12,14 +12,19 @@
 #ifndef SQLITE3_STATIC_EXT_H
 #define SQLITE3_STATIC_EXT_H
 #include "sqlite3.h"
+#ifdef MOZ_SYSTEM_SQLITE
+/* The platform SQLite has no carray(); Gecko carries the extension copy. */
 #include "misc/carray.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#ifdef MOZ_SYSTEM_SQLITE
 SQLITE_API int sqlite3_carray_init(sqlite3*, char**,
                                    const sqlite3_api_routines*);
+#endif
 SQLITE_API int sqlite3_vec_init(sqlite3*, char**,
                                 const sqlite3_api_routines*);
 
