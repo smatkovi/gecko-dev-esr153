@@ -375,6 +375,11 @@ export let WebAuthnPromptHelper = {
   ) {
     this.reset();
     this._tid = tid;
+    // Embedders without the desktop doorhanger UI (e.g. EmbedLite) only get
+    // the modal PIN prompts; the informational prompts are skipped.
+    if (!browsingContext.topChromeWindow?.PopupNotifications) {
+      return;
+    }
 
     // We need to prevent some fullscreen transitions while WebAuthn prompts
     // are shown. The `fullscreen-painted` topic is notified when DOM elements
