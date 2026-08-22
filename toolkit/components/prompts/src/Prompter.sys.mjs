@@ -1182,13 +1182,13 @@ class ModalPrompter {
         }
         if ("promptvalue" in response) {
           args.value = response.promptvalue;
+        }
         if (args.promptType == "promptPassword") {
           args.pass = response.password || "";
           console.debug(
             "EmbedLite promptPassword: accepted=" + !!response.accepted +
             " length=" + args.pass.length
           );
-        }
         }
 
         closed = true;
