@@ -383,6 +383,9 @@ export let WebAuthnPromptHelper = {
     // Embedders without the desktop doorhanger UI (e.g. EmbedLite) only get
     // the modal PIN prompts; the informational prompts are skipped.
     if (!browsingContext.topChromeWindow?.PopupNotifications) {
+      // Nothing can be shown; cancel the transaction instead of leaving the
+      // authenticator waiting for an answer that never comes.
+      lazy.webauthnService.cancel(tid);
       return;
     }
 
