@@ -16,7 +16,9 @@ if CONFIG["MOZ_BUILD_APP"] == "browser":
 
 # These collections are referenced in toolkit/ or other core code, however
 # Android/iOS don't use/want the dumps.
-if not CONFIG["MOZ_BUILD_APP"].startswith("mobile/"):
+# Android ships its own search configuration; other mobile embedders
+# (e.g. mobile/sailfishos) need the dumps like desktop does.
+if CONFIG["MOZ_BUILD_APP"] != "mobile/android":
     FINAL_TARGET_FILES.defaults.settings.main += [
         "anti-tracking-url-decoration.json",
         "cookie-banner-rules-list.json",
