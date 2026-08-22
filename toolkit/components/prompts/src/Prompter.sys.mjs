@@ -1043,6 +1043,11 @@ class ModalPrompter {
         topic = "embed:prompt";
         responseTopic = "promptresponse";
         break;
+      case "promptPassword":
+        // Password-only variant of the auth popup (no username input).
+        topic = "embed:auth";
+        responseTopic = "authresponse";
+        break;
       default:
         return null;
     }
@@ -1095,6 +1100,9 @@ class ModalPrompter {
     if (args.promptType == "prompt") {
       payload.defaultValue = args.value || "";
       payload.inputs.push({ value: args.value || "" });
+    }
+    if (args.promptType == "promptPassword") {
+      payload.inputs.push({ hint: "password", value: args.pass || "" });
     }
     if (args.checkLabel) {
       payload.inputs.push({
@@ -1174,6 +1182,9 @@ class ModalPrompter {
         }
         if ("promptvalue" in response) {
           args.value = response.promptvalue;
+        if (args.promptType == "promptPassword") {
+          args.pass = response.password || "";
+        }
         }
 
         closed = true;
