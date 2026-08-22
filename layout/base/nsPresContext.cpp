@@ -3199,7 +3199,7 @@ void nsRootPresContext::EnsureEventualDidPaintEvent(
         weakThis->NotifyDidPaintForSubtree(aTransactionId);
       },
       100, nsITimer::TYPE_ONE_SHOT,
-      "nsRootPresContext::NotifyDidPaintForSubtree",
+      "nsRootPresContext::NotifyDidPaintForSubtree"_ns,
       GetMainThreadSerialEventTarget());
 
   if (NS_SUCCEEDED(rv)) {
