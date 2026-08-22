@@ -183,9 +183,14 @@ export let WebAuthnPromptHelper = {
       );
     }
 
+    // Tab-modal prompts need the desktop tab dialog box; embedders without
+    // PopupNotifications (e.g. EmbedLite) get the window prompt instead.
+    let modalType = browsingContext.topChromeWindow?.PopupNotifications
+      ? Services.prompt.MODAL_TYPE_TAB
+      : Services.prompt.MODAL_TYPE_WINDOW;
     let res = Services.prompt.promptPasswordBC(
       browsingContext,
-      Services.prompt.MODAL_TYPE_TAB,
+      modalType,
       origin,
       dialogText,
       aPassword
