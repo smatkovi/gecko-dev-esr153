@@ -517,6 +517,16 @@ class nsIWidget : public nsSupportsWeakReference {
   }
 
   /**
+   * EmbedLite hook (series "Allow custom puppet child allocation"): lets a
+   * widget allocate its own puppet child widgets. Default keeps upstream
+   * behaviour.
+   */
+  virtual already_AddRefed<nsIWidget> AllocateChildPuppetWidget(
+      const InitData& aInitData) {
+    return CreatePuppetWidget(nullptr);
+  }
+
+  /**
    * Allocate, initialize, and return a widget that is a child of
    * |this|.  The returned widget (if nonnull) has gone through the
    * equivalent of CreateInstance(widgetCID) + Create(...).
