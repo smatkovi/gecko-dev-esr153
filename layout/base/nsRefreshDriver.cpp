@@ -83,7 +83,6 @@
 #include "VsyncSource.h"
 #include "mozilla/gfx/Logging.h"
 #include "mozilla/VsyncDispatcher.h"
-#include "mozilla/Unused.h"
 #include "nsAnimationManager.h"
 #include "nsComponentManagerUtils.h"
 #include "nsContentUtils.h"
