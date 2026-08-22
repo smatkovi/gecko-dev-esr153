@@ -9,7 +9,7 @@
 namespace mozilla::widget {
 
 EmbedLiteCompositorWidget::EmbedLiteCompositorWidget(
-    const layers::CompositorOptions& aOptions, nsBaseWidget* aWidget)
+    const layers::CompositorOptions& aOptions, nsIWidget* aWidget)
     : InProcessCompositorWidget(aOptions, aWidget) {}
 
 }  // namespace mozilla::widget

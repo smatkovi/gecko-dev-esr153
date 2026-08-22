@@ -14,7 +14,7 @@ namespace mozilla::widget {
 class EmbedLiteCompositorWidget final : public InProcessCompositorWidget {
  public:
   explicit EmbedLiteCompositorWidget(
-      const layers::CompositorOptions& aOptions, nsBaseWidget* aWidget);
+      const layers::CompositorOptions& aOptions, nsIWidget* aWidget);
 
   EmbedLiteCompositorWidget* AsEmbedLite() override { return this; }
   bool IsEmbedLiteOffscreen() const override { return true; }
