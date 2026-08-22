@@ -129,6 +129,15 @@ extern int32_t wgpu_server_get_dma_buf_fd(WGPUWebGPUParentPtr aParent,
 #endif
 }
 #endif
+#if defined(XP_LINUX) && !defined(MOZ_WIDGET_GTK)
+// wgpu stubs for non-GTK Linux (EmbedLite/Qt): the Rust side of wgpu_bindings
+// references these on every Linux target, but DMA-BUF shared textures are
+// only implemented for GTK. Report "no shared texture".
+extern int32_t wgpu_server_get_dma_buf_fd(WGPUWebGPUParentPtr aParent, WGPUTextureId aId) { return -1; }
+extern const WGPUVkImageHandle* wgpu_server_get_vk_image_handle(WGPUWebGPUParentPtr aParent, WGPUTextureId aId) {
+  return nullptr;
+}
+#endif
 
 #ifdef MOZ_WIDGET_GTK
 extern const WGPUVkImageHandle* wgpu_server_get_vk_image_handle(
