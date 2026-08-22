@@ -19,8 +19,8 @@ namespace webrtc {
 namespace videocapturemodule {
 
 webrtc::scoped_refptr<VideoCaptureModule> VideoCaptureImpl::Create(
-    const char* device_unique_id_utf8) {
-  auto implementation = webrtc::make_ref_counted<VideoCaptureModuleSFOS>();
+    Clock* clock, const char* device_unique_id_utf8) {
+  auto implementation = webrtc::make_ref_counted<VideoCaptureModuleSFOS>(clock);
   if (implementation->Init(device_unique_id_utf8) != 0) {
     return nullptr;
   }
@@ -28,10 +28,13 @@ webrtc::scoped_refptr<VideoCaptureModule> VideoCaptureImpl::Create(
 }
 
 webrtc::scoped_refptr<VideoCaptureModule> VideoCaptureImpl::Create(
-    VideoCaptureOptions* /* options */,
+    Clock* clock, VideoCaptureOptions* /* options */,
     const char* device_unique_id_utf8) {
-  return Create(device_unique_id_utf8);
+  return Create(clock, device_unique_id_utf8);
 }
+
+VideoCaptureModuleSFOS::VideoCaptureModuleSFOS(Clock* clock)
+    : VideoCaptureImpl(clock), sfos_clock_(clock) {}
 
 VideoCaptureModuleSFOS::~VideoCaptureModuleSFOS() {
   if (camera_) {
@@ -187,7 +190,7 @@ void VideoCaptureModuleSFOS::onCameraFrame(
     return;
   }
 
-  Clock* clock = Clock::GetRealTimeClockRaw();
+  Clock* clock = sfos_clock_;
   int64_t capture_time_ms = clock->CurrentNtpInMilliseconds();
   if (timestamp_us) {
     const int64_t frame_time_ms =

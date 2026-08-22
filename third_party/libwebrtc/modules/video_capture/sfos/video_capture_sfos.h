@@ -18,7 +18,7 @@ namespace videocapturemodule {
 class VideoCaptureModuleSFOS : public VideoCaptureImpl,
                                public gecko::camera::CameraListener {
  public:
-  VideoCaptureModuleSFOS() = default;
+  explicit VideoCaptureModuleSFOS(Clock* clock);
   ~VideoCaptureModuleSFOS() override;
 
   int32_t Init(const char* device_unique_id_utf8);
@@ -36,6 +36,10 @@ class VideoCaptureModuleSFOS : public VideoCaptureImpl,
 
   unsigned int sensor_mount_angle_ = 0;
   std::shared_ptr<gecko::camera::Camera> camera_;
+
+ private:
+  // VideoCaptureImpl::clock_ is private; keep our own copy of the injected clock.
+  Clock* const sfos_clock_;
 };
 
 }  // namespace videocapturemodule
