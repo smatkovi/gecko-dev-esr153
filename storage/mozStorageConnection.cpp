@@ -3079,7 +3079,7 @@ Connection::LoadExtension(const nsACString& aExtensionName,
 
   RefPtr<Runnable> loadTask = NS_NewRunnableFunction(
       "mozStorageConnection::LoadExtension",
-      [this, self = RefPtr(this), entryPoint = std::move(entryPoint),
+      [this, self = RefPtr(this), extensionName = std::move(extensionName),
        callback = RefPtr(aCallback)]() mutable {
         MOZ_ASSERT(
             !NS_IsMainThread() ||
