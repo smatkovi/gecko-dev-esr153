@@ -303,6 +303,14 @@ export var SearchUtils = {
           uri,
           {}
         );
+      } else if (
+        uri.schemeIs("file") ||
+        uri.schemeIs("chrome") ||
+        uri.schemeIs("resource")
+      ) {
+        // Bundled engines (embedders install OpenSearch files from disk):
+        // a null principal is not allowed to load local URIs.
+        principal = Services.scriptSecurityManager.getSystemPrincipal();
       } else {
         if (!originAttributes) {
           originAttributes = {};
