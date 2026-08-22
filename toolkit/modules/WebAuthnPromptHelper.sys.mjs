@@ -199,6 +199,11 @@ export let WebAuthnPromptHelper = {
   },
 
   select_sign_result(browsingContext, { origin, tid, prompt: { entities } }) {
+    if (!browsingContext.topChromeWindow?.PopupNotifications) {
+      // No chooser UI: take the first entry.
+      lazy.webauthnService.selectionCallback(tid, 0);
+      return;
+    }
     let unknownAccount = this._l10n.formatValueSync(
       "webauthn-select-sign-result-unknown-account"
     );
@@ -383,9 +388,9 @@ export let WebAuthnPromptHelper = {
     // Embedders without the desktop doorhanger UI (e.g. EmbedLite) only get
     // the modal PIN prompts; the informational prompts are skipped.
     if (!browsingContext.topChromeWindow?.PopupNotifications) {
-      // Nothing can be shown; cancel the transaction instead of leaving the
-      // authenticator waiting for an answer that never comes.
-      lazy.webauthnService.cancel(tid);
+      // Informational prompts (presence, already-registered, blocked) need
+      // no answer; the authenticator keeps waiting for the user. Selection
+      // prompts are answered in select_sign_result before reaching here.
       return;
     }
 
