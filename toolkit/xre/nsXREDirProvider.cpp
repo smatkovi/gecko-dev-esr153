@@ -101,7 +101,7 @@ nsIFile* gDataDirHome = nullptr;
 constinit nsCOMPtr<nsIFile> gDataDirProfileLocal{};
 constinit nsCOMPtr<nsIFile> gDataDirProfile{};
 
-#if defined(MOZ_WIDGET_GTK)
+#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
 nsXREDirProvider::legacyOrXDGHomeTelemetry gXdgTelemetry =
     nsXREDirProvider::legacyOrXDGHomeTelemetry::empty;
 #endif  // defined(MOZ_WIDGET_GTK)
@@ -1306,7 +1306,7 @@ nsresult nsXREDirProvider::AppendSysUserExtensionPath(nsIFile* aFile) {
   return NS_OK;
 }
 
-#if defined(MOZ_WIDGET_GTK)
+#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_QT)
 /*
  * Return whether MOZ_LEGACY_HOME == 1, via environment or at build time
  */
