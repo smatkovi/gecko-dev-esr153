@@ -206,7 +206,12 @@ function loadEngineXML(sourceURI, lastModified, originAttributes = null) {
     loadHandler
   );
   chan.notificationCallbacks = listener;
-  chan.asyncOpen(listener);
+  try {
+    chan.asyncOpen(listener);
+  } catch (e) {
+    lazy.logConsole.debug("asyncOpen failed:", e);
+    loadPromise.reject(e);
+  }
 
   return loadPromise.promise;
 }
