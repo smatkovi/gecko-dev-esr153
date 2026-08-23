@@ -1115,7 +1115,17 @@ void nsHttpHandler::InitUserAgentComponents() {
       // and there seems little a webpage can sensibly do
       // based on it being something else, so use X11 for
       // backwards compatibility in all cases.
+      //
+      // EmbedLite reports "Mobile" as the compat device (see below); the
+      // combination "X11; Mobile" exists nowhere else on the web, and bot
+      // management services read it as a manipulated client. Report the same
+      // platform Firefox for Android does, which is what the mobile compat
+      // device implies.
+#  ifdef MOZ_WIDGET_QT
+      "Android 13"
+#  else
       "X11"
+#  endif
 #endif
   );
 
