@@ -823,6 +823,13 @@ void gfxPlatform::Init() {
   gfxConfig::Init();
 
   if (XRE_IsParentProcess()) {
+#ifdef MOZ_EMBEDLITE
+    // Only the GTK backend ever sets this, and EmbedLite has no GLX path.
+    // Without it RenderCompositorEGL::Create() bails out on its first line
+    // (kIsLinux && !gfxVars::UseEGL()), so the offscreen compositing path is
+    // never entered and every frame falls back to software.
+    gfxVars::SetUseEGL(true);
+#endif
     GPUProcessManager::Initialize();
     RDDProcessManager::Initialize();
 

@@ -756,6 +756,7 @@ RefPtr<GLContextEGL> GLContextEGL::CreateGLContext(
   if (useGles) {
     // TODO: This fBindAPI could be more thread-safe
     if (egl->mLib->fBindAPI(LOCAL_EGL_OPENGL_ES_API) == LOCAL_EGL_FALSE) {
+      printf_stderr("EL-EGL bindAPI(ES) failed err=0x%x\n", (unsigned)egl->mLib->fGetError());
       *out_failureId = "FEATURE_FAILURE_EGL_ES"_ns;
       NS_WARNING("Failed to bind API to GLES!");
       return nullptr;
@@ -768,6 +769,7 @@ RefPtr<GLContextEGL> GLContextEGL::CreateGLContext(
     }
   } else {
     if (egl->mLib->fBindAPI(LOCAL_EGL_OPENGL_API) == LOCAL_EGL_FALSE) {
+      printf_stderr("EL-EGL bindAPI(GL) failed err=0x%x\n", (unsigned)egl->mLib->fGetError());
       *out_failureId = "FEATURE_FAILURE_EGL"_ns;
       NS_WARNING("Failed to bind API to GL!");
       return nullptr;
@@ -858,8 +860,13 @@ RefPtr<GLContextEGL> GLContextEGL::CreateGLContext(
       terminated_attribs.push_back(cur);
     }
 
-    return egl->fCreateContext(contextConfig, EGL_NO_CONTEXT,
-                               terminated_attribs.data());
+    const auto ctx = egl->fCreateContext(contextConfig, EGL_NO_CONTEXT,
+                                         terminated_attribs.data());
+    if (!ctx) {
+      printf_stderr("EL-EGL create failed err=0x%x attribs=%zu\n",
+                    (unsigned)egl->mLib->fGetError(), terminated_attribs.size());
+    }
+    return ctx;
   };
 
   EGLContext context;

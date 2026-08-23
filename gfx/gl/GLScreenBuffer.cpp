@@ -53,6 +53,16 @@ UniquePtr<SwapChainPresenter> SwapChain::Acquire(
     }
   }
 
+  ++mAcquireCounter;
+  {
+    const auto it = mLastAcquired.find(surf.get());
+    mLastAcquiredAge =
+        (it == mLastAcquired.end())
+            ? 0
+            : static_cast<size_t>(mAcquireCounter - it->second);
+    mLastAcquired[surf.get()] = mAcquireCounter;
+  }
+
   auto ret = MakeUnique<SwapChainPresenter>(*this);
   const auto old = ret->SwapBackBuffer(std::move(surf));
   MOZ_ALWAYS_TRUE(!old);
@@ -62,6 +72,8 @@ UniquePtr<SwapChainPresenter> SwapChain::Acquire(
 void SwapChain::ClearPool() {
   mPool = {};
   mPrevFrontBuffer = nullptr;
+  mLastAcquired.clear();
+  mLastAcquiredAge = 0;
 }
 
 bool SwapChain::StoreRecycledSurface(

@@ -66,6 +66,9 @@ class SwapChain final {
       mPrevFrontBuffer;  // Hold this ref while it's in-flight.
  private:
   SwapChainPresenter* mPresenter = nullptr;
+  uint64_t mAcquireCounter = 0;
+  std::unordered_map<const SharedSurface*, uint64_t> mLastAcquired;
+  size_t mLastAcquiredAge = 0;
 
  public:
   SwapChain();
@@ -82,6 +85,11 @@ class SwapChain final {
   void ClearPool();
   bool StoreRecycledSurface(const std::shared_ptr<SharedSurface>& surf);
   const auto& FrontBuffer() const { return mFrontBuffer; }
+
+  // Age of the surface handed out by the most recent Acquire(): how many
+  // Acquire() calls ago the same surface was last used, or 0 when it has
+  // never been used before (then its contents are undefined).
+  size_t LastAcquiredAge() const { return mLastAcquiredAge; }
   UniquePtr<SwapChainPresenter> Acquire(const gfx::IntSize&, gfx::ColorSpace2,
                                         gfx::TransferFunction);
 
@@ -108,6 +116,11 @@ class GLScreenBuffer final {
   bool PublishFrame(const gfx::IntSize&);
   const gfx::IntSize& Size() const { return mSize; }
   const std::shared_ptr<SharedSurface>& FrontBuffer() const;
+  // Age of the surface the swap chain handed out most recently; see
+  // SwapChain::LastAcquiredAge(). 0 means "contents unknown".
+  size_t LastAcquiredAge() const {
+    return mSwapChain ? mSwapChain->LastAcquiredAge() : 0;
+  }
   GLuint Fb() const;
 };
 

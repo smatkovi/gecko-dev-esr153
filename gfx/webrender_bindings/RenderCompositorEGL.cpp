@@ -435,6 +435,13 @@ bool RenderCompositorEGL::ShouldDrawPreviousPartialPresentRegions() {
 
 size_t RenderCompositorEGL::GetBufferAge() const {
 #ifdef MOZ_EMBEDLITE
+  if (mUseEmbedLiteOffscreen && gl() && gl()->Screen()) {
+    // The offscreen path rotates SharedSurfaces; the swap chain now tracks
+    // how many Acquire() calls ago each surface was last used, which is the
+    // same semantics EGL_BUFFER_AGE_EXT provides. 0 means "contents unknown"
+    // and makes WebRender render the full frame.
+    return gl()->Screen()->LastAcquiredAge();
+  }
   return 0;  // Alter unbekannt -> WebRender rendert voll.
 #else
   if (!StaticPrefs::gfx_webrender_allow_partial_present_buffer_age_AtStartup()) {
