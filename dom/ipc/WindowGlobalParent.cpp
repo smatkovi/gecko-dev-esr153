@@ -960,10 +960,33 @@ class CheckPermitUnloadRequest final : public PromiseNativeHandler,
           WrapNotNull(aDocShellLoadState);
       if (mAction ==
           nsIDocumentViewer::PermitUnloadAction::eDontPromptAndUnload) {
-        cp->SendDispatchNavigateToTraversable(bc, loadState, resolve, reject);
-      } else {
+        if (cp) {
+          cp->SendDispatchNavigateToTraversable(bc, loadState, resolve, reject);
+        } else {
+          // In-process embedders (e.g. EmbedLite) have no content process;
+          // do locally what RecvDispatchNavigateToTraversable would do.
+          NS_DispatchToMainThread(NS_NewRunnableFunction(
+              "DispatchNavigateToTraversable",
+              [bc = RefPtr{bc}, loadState, resolve]() {
+                if (!bc || !bc->GetDocShell()) {
+                  resolve(nsIDocumentViewer::eContinue);
+                  return;
+                }
+                RefPtr docShell = nsDocShell::Cast(bc->GetDocShell());
+                resolve(docShell->MaybeFireTraversableTraverseHistory(
+                    MOZ_KnownLive(loadState.get()), Nothing()));
+              }));
+        }
+      } else if (cp) {
         cp->SendDispatchBeforeUnloadToSubtree(bc, Some(loadState), resolve,
                                               reject);
+      } else {
+        NS_DispatchToMainThread(NS_NewRunnableFunction(
+            "DispatchBeforeUnloadToSubtree",
+            [bc = RefPtr{bc}, loadState, resolve]() {
+              ContentChild::DispatchBeforeUnloadToSubtree(bc, Some(loadState),
+                                                          resolve);
+            }));
       }
     } else {
       bc->PreOrderWalk([&](dom::BrowsingContext* aBC) {
