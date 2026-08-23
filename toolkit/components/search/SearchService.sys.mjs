@@ -2652,7 +2652,7 @@ export const SearchService = new (class SearchService {
    * @returns {Promise<boolean>}
    *   Returns true if the default engine was changed.
    */
-  async #loadEnginesFromSettings(settings, engines) {
+  async #loadEnginesFromSettings(settings, engines = []) {
     if (!settings.engines) {
       return false;
     }
