@@ -78,9 +78,16 @@ struct SharedSurfaceDesc : public PartialSharedSurfaceDesc {
 };
 
 class SharedSurface {
+ private:
+  static inline uint64_t sLastSurfaceId = 0;
+
  public:
+  // Unique per surface instance. Recycled surfaces are freed and reallocated,
+  // so a pointer is not a stable identity for age tracking.
+  const uint64_t mSurfaceId = ++sLastSurfaceId;
   const SharedSurfaceDesc mDesc;
   const UniquePtr<MozFramebuffer> mFb;  // null if we should use fb=0.
+
 
  protected:
   bool mIsLocked = false;

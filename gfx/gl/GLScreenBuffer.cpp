@@ -53,14 +53,16 @@ UniquePtr<SwapChainPresenter> SwapChain::Acquire(
     }
   }
 
-  ++mAcquireCounter;
   {
-    const auto it = mLastAcquired.find(surf.get());
+    // Age is counted in published frames, not in Acquire() calls: PublishFrame()
+    // drops the presenter and immediately reacquires, so Acquire() runs about
+    // twice per frame and would report a bogus age.
+    const auto it = mLastAcquired.find(surf->mSurfaceId);
     mLastAcquiredAge =
         (it == mLastAcquired.end())
             ? 0
-            : static_cast<size_t>(mAcquireCounter - it->second);
-    mLastAcquired[surf.get()] = mAcquireCounter;
+            : static_cast<size_t>(mFrameCounter - it->second);
+    mPendingSurfaceId = surf->mSurfaceId;
   }
 
   auto ret = MakeUnique<SwapChainPresenter>(*this);
@@ -69,11 +71,19 @@ UniquePtr<SwapChainPresenter> SwapChain::Acquire(
   return ret;
 }
 
+void SwapChain::MarkFramePublished() {
+  ++mFrameCounter;
+  if (mPendingSurfaceId) {
+    mLastAcquired[mPendingSurfaceId] = mFrameCounter;
+  }
+}
+
 void SwapChain::ClearPool() {
   mPool = {};
   mPrevFrontBuffer = nullptr;
   mLastAcquired.clear();
   mLastAcquiredAge = 0;
+  mPendingSurfaceId = 0;
 }
 
 bool SwapChain::StoreRecycledSurface(
@@ -138,7 +148,13 @@ SwapChain::SwapChain()
     :  // We need to apply pooling on Android because of the AndroidSurface slow
        // destructor bugs. They cause a noticeable performance hit. See bug
        // #1646073.
-      mPoolLimit(kIsAndroid ? 4 : 0) {}
+      mPoolLimit(
+#ifdef MOZ_EMBEDLITE
+          2
+#else
+          kIsAndroid ? 4 : 0
+#endif
+          ) {}
 
 SwapChain::~SwapChain() {
   if (mPresenter) {
@@ -201,6 +217,7 @@ bool GLScreenBuffer::PublishFrame(const gfx::IntSize& size) {
   }
 
   mPresenter = nullptr;
+  mSwapChain->MarkFramePublished();
   return Resize(size);
 }
 

@@ -401,13 +401,10 @@ LayoutDeviceIntSize RenderCompositorEGL::GetBufferSize() {
 
 bool RenderCompositorEGL::UsePartialPresent() {
 #ifdef MOZ_EMBEDLITE
-  static bool sLogged = false;
-  if (!sLogged) { sLogged = true; gfxCriticalNote << "EL-PP RenderCompositorEGL active, partial OFF"; }
-  // Embedding rendert in die SharedSurface-Rotation ohne echte
-  // Swapchain-Age-Semantik - Partial Present frisst dort Pixel
-  // (wachsende schwarze Loecher). Hart aus, unabhaengig vom Widget:
-  // der Nachfolger-Renderer haelt nicht immer das EmbedLite-Widget.
-  return false;
+  // Buffer-Age ist laut WebRender-Doku nur relevant, wenn Partial Present
+  // aktiv ist ("otherwise 0 should be passed here"). Mit rotierendem Pool und
+  // MarkFramePublished-Zaehler liefert GetBufferAge() jetzt echte Werte.
+  return gfx::gfxVars::WebRenderMaxPartialPresentRects() > 0;
 #else
   return gfx::gfxVars::WebRenderMaxPartialPresentRects() > 0;
 #endif
@@ -415,11 +412,17 @@ bool RenderCompositorEGL::UsePartialPresent() {
 
 bool RenderCompositorEGL::RequestFullRender() {
 #ifdef MOZ_EMBEDLITE
-  // Surface-Fabrik: jeder Frame ein fabrikneues (schwarzes) FBO - Picture-
-  // Cache darf nie annehmen, das Ziel enthalte den letzten Frame. Ohne das
-  // zeichnen APZ-Composites (Touch!) nur Dirty-Tiles in leere Buffer:
-  // 68-88%-Schwarz-Degradation exakt bei Beruehrung.
-  return true;
+  // Mit rotierendem Surface-Pool enthaelt das Ziel den vorletzten Frame.
+  // Picture Cache darf Kacheln nur wiederverwenden, wenn in denselben Puffer
+  // gezeichnet wird wie zuletzt; sonst muss der Frame komplett neu.
+  if (mUseEmbedLiteOffscreen && gl() && gl()->Screen()) {
+    if (const auto& back = gl()->Screen()->BackBuffer()) {
+      const bool sameSurface = (back->mSurfaceId == mLastRenderedSurfaceId);
+      mLastRenderedSurfaceId = back->mSurfaceId;
+      return !sameSurface;
+    }
+  }
+  return false;
 #else
   return false;
 #endif

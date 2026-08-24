@@ -60,6 +60,7 @@ class RenderCompositorEGL : public RenderCompositor {
 
   EGLSurface mEGLSurface;
   bool mUseEmbedLiteOffscreen;
+  mutable uint64_t mLastRenderedSurfaceId = 0;
 
   // Whether we are in the process of handling a NEW_SURFACE error. On Android
   // this is used to allow the widget an opportunity to recover from the first
