@@ -540,6 +540,12 @@ GLContextEGL::~GLContextEGL() {
                 mSurface, mEgl->mDisplay);
 #endif
 
+  // Release the context before destroying it. eglDestroyContext on a context
+  // that is still current only flags it for deletion, and the Adreno driver
+  // unbinds it itself from inside eglDestroyContext - reaching
+  // EglContext::UnmakeCurrentEsx() on an already torn down object.
+  mEgl->fMakeCurrent(EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+
   mEgl->fDestroyContext(mContext);
 
   DestroySurface(*mEgl, mSurface);
