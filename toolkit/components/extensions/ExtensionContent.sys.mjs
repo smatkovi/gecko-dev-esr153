@@ -667,7 +667,9 @@ class Script {
           ? windowUtils.USER_SHEET
           : windowUtils.AUTHOR_SHEET;
       for (const sheet of sheets) {
-        runSafeSyncWithoutClone(windowUtils.addSheet, sheet, type);
+        // addSheet has to keep its binding to windowUtils; passing the bare
+        // method loses `this` and the XPCOM call fails with NS_ERROR_ILLEGAL_VALUE.
+        runSafeSyncWithoutClone(() => windowUtils.addSheet(sheet, type));
       }
     }
 
