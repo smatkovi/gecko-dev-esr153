@@ -803,11 +803,10 @@ class Script {
       }
     }
 
-    let sheets = sheetPromises.map(sheetPromise => sheetPromise.sheet);
-    if (!sheets.every(sheet => sheet)) {
-      return Promise.all(sheetPromises);
-    }
-    return sheets;
+    // A set `sheet` property does not mean the underlying PreloadedStyleSheet
+    // finished loading - addSheet then fails with NS_ERROR_ILLEGAL_VALUE.
+    // Await the promises instead of trusting the property.
+    return Promise.all(sheetPromises);
   }
 
   removeStyleSheets(window) {

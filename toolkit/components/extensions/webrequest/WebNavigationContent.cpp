@@ -268,17 +268,18 @@ WebNavigationContent::OnLocationChange(nsIWebProgress* aWebProgress,
     }
   } else {
     MOZ_ASSERT(bc->IsInProcess());
-    if (RefPtr browserChild = dom::BrowserChild::GetFrom(bc->GetDocShell())) {
-      // Only send progress events which happen after we've started loading
-      // things into the BrowserChild. This matches the behavior of the remote
-      // WebProgress implementation.
-      if (browserChild->ShouldSendWebProgressEventsToParent()) {
-        // Based on the docs of the webNavigation.onCommitted event, it should
-        // be raised when: "The document might still be downloading, but at
-        // least part of the document has been received".
-        ExtensionsChild::Get().SendDocumentChange(
-            bc, GetFrameTransitionData(aWebProgress, aRequest), aLocation);
-      }
+    RefPtr browserChild = dom::BrowserChild::GetFrom(bc->GetDocShell());
+    // Based on the docs of the webNavigation.onCommitted event, it should
+    // be raised when: "The document might still be downloading, but at
+    // least part of the document has been received".
+    //
+    // With a BrowserChild, only send events after loading has started in it,
+    // matching the remote WebProgress implementation. Embedders that run
+    // without one - EmbedLite has no BrowserChild at all - would otherwise
+    // never get webNavigation events, so send unconditionally there.
+    if (!browserChild || browserChild->ShouldSendWebProgressEventsToParent()) {
+      ExtensionsChild::Get().SendDocumentChange(
+          bc, GetFrameTransitionData(aWebProgress, aRequest), aLocation);
     }
   }
 
