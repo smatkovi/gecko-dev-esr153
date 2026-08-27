@@ -3694,6 +3694,20 @@ nsDOMWindowUtils::LoadSheetUsingURIString(const nsACString& aSheetURI,
 }
 
 NS_IMETHODIMP
+nsDOMWindowUtils::SetEmbedderElement(Element* aElement) {
+  NS_ENSURE_ARG_POINTER(aElement);
+
+  nsCOMPtr<nsPIDOMWindowOuter> window = do_QueryReferent(mWindow);
+  NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
+
+  RefPtr<BrowsingContext> bc = window->GetBrowsingContext();
+  NS_ENSURE_TRUE(bc, NS_ERROR_FAILURE);
+
+  bc->Top()->SetEmbedderElement(aElement);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsDOMWindowUtils::AddSheet(nsIPreloadedStyleSheet* aSheet,
                            uint32_t aSheetType) {
   NS_ENSURE_ARG_POINTER(aSheet);

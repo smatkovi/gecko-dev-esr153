@@ -1741,6 +1741,17 @@ interface nsIDOMWindowUtils : nsISupports {
    *
    * Sheets added via this API take effect immediately on the document.
    */
+  /**
+   * Make aElement the embedder element of this window's top browsing context.
+   *
+   * Gecko's WebExtension code reads Top()->GetEmbedderElement() in several
+   * places - WebNavigation.fire, the tabs API, browserAction - and gives up
+   * when it is null. Embedders that render without a XUL <browser> never have
+   * one, so those APIs stay silent for them. This lets such an embedder attach
+   * an element from a hidden chrome document instead.
+   */
+  void setEmbedderElement(in Element aElement);
+
   void loadSheet(in nsIURI sheetURI, in unsigned long type);
 
   /**
